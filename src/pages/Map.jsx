@@ -69,7 +69,7 @@ function LiveDisplay({ speed, distance }) {
   )
 }
 
-export default function Map({ darkMode }) {
+export default function Map({ darkMode, onSelectRider }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
   } : {
@@ -255,8 +255,18 @@ export default function Map({ darkMode }) {
               key={rider.id}
               position={[48.14, 11.58]}
               icon={createRiderIcon('#f97316', false, rider.profiles?.avatar_url, rider.profiles?.username)}
+              eventHandlers={{
+                click: () => onSelectRider && onSelectRider(rider.profiles?.id || rider.user_id)
+              }}
             >
-              <Popup>{rider.profiles?.username || 'Fahrer'} 🏍️</Popup>
+              <Popup>
+                <div
+                  onClick={() => onSelectRider && onSelectRider(rider.profiles?.id || rider.user_id)}
+                  style={{ cursor: 'pointer', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}
+                >
+                  {rider.profiles?.username || 'Fahrer'} →
+                </div>
+              </Popup>
             </Marker>
           ))}
         </MapContainer>
@@ -389,16 +399,30 @@ export default function Map({ darkMode }) {
         </div>
       )}
 
-      {/* Live Riders Panel */}
+      {/* Live Riders Panel — clickable to open profile */}
       {showRiders && liveRiders.length > 0 && (
         <div style={{ background: t.surface, borderTop: `1px solid ${t.border}`, padding: '12px 16px', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
             {liveRiders.map(rider => (
-              <div key={rider.id} style={{
-                background: t.bg, borderRadius: '10px', padding: '10px 14px',
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px',
-                border: `1px solid ${t.border}`
-              }}>
+              <button
+                key={rider.id}
+                onClick={() => onSelectRider && onSelectRider(rider.profiles?.id || rider.user_id)}
+                style={{
+                  background: t.bg, borderRadius: '10px', padding: '10px 14px',
+                  flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px',
+                  border: `1px solid ${t.border}`, cursor: 'pointer',
+                  transition: 'border-color var(--transition-fast), transform var(--transition-fast)',
+                  fontFamily: 'inherit'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = t.border
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
                 <div style={{
                   width: '32px', height: '32px', borderRadius: '50%',
                   background: '#f97316', overflow: 'hidden',
@@ -409,16 +433,16 @@ export default function Map({ darkMode }) {
                     ? <img src={rider.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : rider.profiles?.username?.slice(0,2).toUpperCase() || '??'}
                 </div>
-                <div>
-                  <p style={{ color: t.text, fontSize: '13px', fontWeight: '600', fontFamily: "'Barlow', sans-serif" }}>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ color: t.text, fontSize: '13px', fontWeight: '600', fontFamily: "'Barlow', sans-serif", margin: 0 }}>
                     {rider.profiles?.username || 'Fahrer'}
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' }} />
-                    <p style={{ color: t.muted, fontSize: '11px' }}>Live</p>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e' }} className="animate-pulse" />
+                    <p style={{ color: t.muted, fontSize: '11px', margin: 0 }}>Live</p>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

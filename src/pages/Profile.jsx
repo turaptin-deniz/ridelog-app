@@ -38,15 +38,24 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showLanguage, setShowLanguage] = useState(false)
-  const [selectedLanguage, setSelectedLanguage] = useState('de')
   const [editingImages, setEditingImages] = useState(false)
   const [editData, setEditData] = useState({ username: '', bio: '', location: '' })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const avatarRef = useRef()
   const bannerRef = useRef()
+
+  // Listen for global plus-button click → open edit modal when on profile page
+  useEffect(() => {
+    const handlePlus = (e) => {
+      if (e.detail?.page === 'profil') {
+        setEditing(true)
+        setEditingImages(true)
+      }
+    }
+    window.addEventListener('ridelog:plus-click', handlePlus)
+    return () => window.removeEventListener('ridelog:plus-click', handlePlus)
+  }, [])
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -513,126 +522,61 @@ const toggleFollow = async () => {
         )}
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Modal — centered */}
       {editing && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 }}
+        <div
+          onClick={() => { setEditing(false); setEditingImages(false) }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: 'var(--space-4)', backdropFilter: 'blur(4px)'
+          }}
           className="animate-fadeIn">
-          <div style={{ background: t.surface, borderRadius: '16px 16px 0 0', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflowY: 'auto' }}
-            className="animate-slideUp">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>Profil bearbeiten</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Settings-Icon im Edit-Modal */}
-                <button onClick={() => setShowSettings(true)} style={{
-                  background: 'none', border: `1px solid ${t.border}`, color: t.muted,
-                  cursor: 'pointer', borderRadius: '8px', padding: '6px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'color 0.15s, border-color 0.15s'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                  </svg>
-                </button>
-                <button onClick={() => { setEditing(false); setEditingImages(false) }} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px' }}>✕</button>
-              </div>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: t.surface, borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-6)', width: '100%', maxWidth: '420px',
+              maxHeight: '85vh', overflowY: 'auto',
+              border: `1px solid ${t.border}`,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+            }}
+            className="animate-scaleIn">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
+              <h3 style={{ color: t.text, fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', fontFamily: "var(--font-family-condensed)", margin: 0 }}>
+                Profil bearbeiten
+              </h3>
+              <button onClick={() => { setEditing(false); setEditingImages(false) }} style={{
+                background: 'none', border: 'none', color: t.muted, cursor: 'pointer',
+                fontSize: '22px', padding: 0, lineHeight: 1
+              }}>×</button>
             </div>
-            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
+
+            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Username</label>
             <input value={editData.username} onChange={e => setEditData({...editData, username: e.target.value})}
               placeholder="dein_username" style={inputStyle} />
-            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Standort</label>
+
+            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Standort</label>
             <input value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})}
               placeholder="z.B. München, Bayern" style={inputStyle} />
-            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bio</label>
+
+            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Bio</label>
             <textarea value={editData.bio} onChange={e => setEditData({...editData, bio: e.target.value})}
               placeholder="Erzähl was über dich..." rows={3}
               style={{ ...inputStyle, resize: 'none' }} />
-            <button onClick={saveProfile} className="btn-press" style={{
-              width: '100%', background: '#6C63FF', color: 'white', border: 'none',
-              borderRadius: '8px', padding: '14px', cursor: 'pointer', fontSize: '15px',
-              fontWeight: '700', fontFamily: "'Barlow', sans-serif"
+
+            <button onClick={saveProfile} style={{
+              width: '100%', background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
+              color: 'white', border: 'none',
+              borderRadius: 'var(--radius-md)', padding: 'var(--space-3)',
+              cursor: 'pointer', fontSize: 'var(--font-size-base)',
+              fontWeight: 'var(--font-weight-bold)', fontFamily: "var(--font-family-primary)",
+              boxShadow: '0 4px 15px rgba(255,107,53,0.25)',
+              transition: 'all var(--transition-fast)'
             }}>Speichern</button>
           </div>
         </div>
       )}
-
-      {/* Settings Modal */}
-      {showSettings && (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
-    className="animate-fadeIn">
-    <div style={{ background: t.surface, borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '380px' }}
-      className="animate-scaleIn">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>Einstellungen</h3>
-        <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px' }}>✕</button>
-      </div>
-      {[
-        { label: darkMode ? '☀️ Light Mode' : '🌙 Dark Mode', action: () => setDarkMode(!darkMode) },
-        { label: '🔒 Privatsphäre', action: () => {} },
-        { label: '🌍 Sprache', action: () => setShowLanguage(true) },
-      ].map(item => (
-        <button key={item.label} onClick={item.action} className="btn-press" style={{
-          width: '100%', background: t.bg, border: `1px solid ${t.border}`,
-          color: t.text, borderRadius: '8px', padding: '14px 16px',
-          cursor: 'pointer', fontSize: '14px', fontWeight: '600',
-          fontFamily: "'Barlow', sans-serif", textAlign: 'left', marginBottom: '8px'
-        }}>{item.label}</button>
-      ))}
-      <button onClick={() => supabase.auth.signOut()} className="btn-press" style={{
-        width: '100%', background: 'transparent', border: '1px solid #f87171',
-        color: '#f87171', borderRadius: '8px', padding: '14px 16px',
-        cursor: 'pointer', fontSize: '14px', fontWeight: '600',
-        fontFamily: "'Barlow', sans-serif", marginTop: '8px'
-      }}>🚪 Abmelden</button>
-    </div>
-  </div>
-)}
-
-{/* Language Modal */}
-{showLanguage && (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}
-    className="animate-fadeIn">
-    <div style={{ background: t.surface, borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '380px' }}
-      className="animate-scaleIn">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>Sprache</h3>
-        <button onClick={() => setShowLanguage(false)} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px' }}>✕</button>
-      </div>
-      {[
-        { label: 'Deutsch', flag: '🇩🇪', id: 'de' },
-        { label: 'Englisch', flag: '🇬🇧', id: 'en' },
-        { label: 'Französisch', flag: '🇫🇷', id: 'fr' },
-        { label: 'Spanisch', flag: '🇪🇸', id: 'es' },
-      ].map(lang => (
-        <button key={lang.id} onClick={() => { setSelectedLanguage(lang.id); setShowLanguage(false) }} className="btn-press" style={{
-          width: '100%', background: selectedLanguage === lang.id ? '#6C63FF22' : t.bg,
-          border: `1px solid ${selectedLanguage === lang.id ? '#6C63FF' : t.border}`,
-          color: t.text, borderRadius: '8px', padding: '14px 16px',
-          cursor: 'pointer', fontSize: '14px', fontWeight: '600',
-          fontFamily: "'Barlow', sans-serif", textAlign: 'left', marginBottom: '8px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
-          <span>{lang.flag} {lang.label}</span>
-          {selectedLanguage === lang.id && <span style={{ color: '#6C63FF', fontSize: '16px' }}>✓</span>}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-
-      {/* Plus FAB Button */}
-      <button onClick={() => { setEditing(true); setEditingImages(true) }} style={{
-        position: 'fixed', bottom: '80px', right: 'calc(50% - 224px)',
-        background: 'var(--color-accent-primary)', border: 'none', borderRadius: '50%',
-        width: '44px', height: '44px', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 16px rgba(255,107,53,0.4)', zIndex: 100
-      }}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
     </div>
   )
 }

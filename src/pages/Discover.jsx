@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
-export default function Discover({ darkMode }) {
+export default function Discover({ darkMode, searchQuery: externalQuery, onSelectUser }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
   } : {
@@ -12,7 +12,9 @@ export default function Discover({ darkMode }) {
   const [users, setUsers] = useState([])
   const [routes, setRoutes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [localQuery, setLocalQuery] = useState('')
+  const searchQuery = externalQuery !== undefined ? externalQuery : localQuery
+  const setSearchQuery = externalQuery !== undefined ? () => {} : setLocalQuery
   const [currentUser, setCurrentUser] = useState(null)
   const [followStates, setFollowStates] = useState({})
 
@@ -111,7 +113,8 @@ export default function Discover({ darkMode }) {
   return (
     <div style={{ flex: 1, background: t.bg, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* Search Bar */}
+      {/* Search Bar — only shown when used standalone (not when controlled by header) */}
+      {externalQuery === undefined && (
       <div style={{ padding: '12px 16px', borderBottom: `1px solid ${t.border}`, background: t.surface, flexShrink: 0 }}>
         <div style={{ position: 'relative' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -131,6 +134,7 @@ export default function Discover({ darkMode }) {
           />
         </div>
       </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, background: t.surface, flexShrink: 0 }}>
@@ -167,8 +171,11 @@ export default function Discover({ darkMode }) {
                 return (
                   <div key={user.id} style={{
                     padding: '14px 16px', borderBottom: `1px solid ${t.border}`,
-                    display: 'flex', alignItems: 'center', gap: '12px'
-                  }} className="animate-fadeIn">
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    cursor: onSelectUser ? 'pointer' : 'default'
+                  }}
+                  onClick={() => onSelectUser && onSelectUser(user.id)}
+                  className="animate-fadeIn">
 
                     {/* Avatar */}
                     <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -218,7 +225,7 @@ export default function Discover({ darkMode }) {
                     </div>
 
                     {/* Follow Button */}
-                    <button onClick={() => toggleFollow(user.id)} className="btn-press" style={{
+                    <button onClick={e => { e.stopPropagation(); toggleFollow(user.id) }} className="btn-press" style={{
                       background: isFollowing ? 'transparent' : '#6C63FF',
                       border: isFollowing ? `1px solid ${t.border}` : 'none',
                       color: isFollowing ? t.muted : 'white',
