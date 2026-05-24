@@ -12,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-const createRiderIcon = (color = '#6C63FF', isMe = false, avatarUrl = null, username = '') => {
+const createRiderIcon = (color = '#3b82f6', isMe = false, avatarUrl = null, username = '') => {
   const size = isMe ? 44 : 36
   const content = avatarUrl
     ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
@@ -58,12 +58,12 @@ function LiveDisplay({ speed, distance }) {
       <div style={{ transition: 'opacity 0.5s', opacity: showKm ? 0 : 1, position: showKm ? 'absolute' : 'relative' }}>
         <p style={{ color: '#555', fontSize: '10px', fontWeight: '700', letterSpacing: '0.15em', fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>GESCHWINDIGKEIT</p>
         <p style={{ color: 'white', fontSize: '64px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{speed}</p>
-        <p style={{ color: '#6C63FF', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM/H</p>
+        <p style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM/H</p>
       </div>
       <div style={{ transition: 'opacity 0.5s', opacity: showKm ? 1 : 0, position: showKm ? 'relative' : 'absolute' }}>
         <p style={{ color: '#555', fontSize: '10px', fontWeight: '700', letterSpacing: '0.15em', fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>GEFAHRENE KILOMETER</p>
         <p style={{ color: 'white', fontSize: '64px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{distance.toFixed(1)}</p>
-        <p style={{ color: '#6C63FF', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM</p>
+        <p style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM</p>
       </div>
     </div>
   )
@@ -226,7 +226,7 @@ export default function Map({ darkMode, onSelectRider }) {
           {centerOn && followMe && <CenterMap position={centerOn} />}
 
           {myPosition && (
-            <Marker position={myPosition} icon={createRiderIcon('#6C63FF', true, myProfile?.avatar_url, myProfile?.username)}>
+            <Marker position={myPosition} icon={createRiderIcon('#3b82f6', true, myProfile?.avatar_url, myProfile?.username)}>
               <Popup>
                 <div style={{ fontFamily: "'Barlow', sans-serif" }}>
                   <p style={{ fontWeight: '700' }}>Du</p>
@@ -285,11 +285,11 @@ export default function Map({ darkMode, onSelectRider }) {
         <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
           {!isLive ? (
             <button onClick={startRide} style={{
-              background: `linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)`,
+              background: `linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%)`,
               color: 'white', border: 'none',
               borderRadius: '50px', padding: '14px 32px', cursor: 'pointer',
               fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
-              boxShadow: '0 4px 24px rgba(255,107,53,0.6)', letterSpacing: '0.5px',
+              boxShadow: '0 4px 24px rgba(59,130,246,0.6)', letterSpacing: '0.5px',
               display: 'flex', alignItems: 'center', gap: '10px',
               transition: 'transform var(--transition-fast)'
             }}
@@ -390,7 +390,7 @@ export default function Map({ darkMode, onSelectRider }) {
               }}>
                 <p style={{ color: '#555', fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '4px' }}>{stat.label}</p>
                 <p style={{ color: 'white', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
-                {stat.unit && <p style={{ color: '#6C63FF', fontSize: '9px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginTop: '2px' }}>{stat.unit}</p>}
+                {stat.unit && <p style={{ color: '#3b82f6', fontSize: '9px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginTop: '2px' }}>{stat.unit}</p>}
               </div>
             ))}
           </div>
@@ -465,7 +465,7 @@ export default function Map({ darkMode, onSelectRider }) {
               ].map(stat => (
                 <div key={stat.label} style={{ background: '#1a1a1a', borderRadius: '10px', padding: '14px' }}>
                   <p style={{ fontSize: '22px', marginBottom: '6px' }}>{stat.icon}</p>
-                  <p style={{ color: '#6C63FF', fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
+                  <p style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
                   <p style={{ color: '#555', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
                 </div>
               ))}
@@ -477,7 +477,7 @@ export default function Map({ darkMode, onSelectRider }) {
                 cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
               }}>Schließen</button>
               <button onClick={() => setShowStats(false)} className="btn-press" style={{
-                flex: 2, background: '#6C63FF', border: 'none', color: 'white',
+                flex: 2, background: '#3b82f6', border: 'none', color: 'white',
                 borderRadius: '8px', padding: '13px', cursor: 'pointer',
                 fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
               }}>Tour teilen 🚀</button>

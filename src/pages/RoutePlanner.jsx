@@ -15,7 +15,7 @@ const createStopIcon = (index) => L.divIcon({
   className: '',
   html: `<div style="
     width:30px;height:30px;border-radius:50%;
-    background:#6C63FF;border:2px solid white;
+    background:#3b82f6;border:2px solid white;
     display:flex;align-items:center;justify-content:center;
     color:white;font-size:12px;font-weight:700;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
@@ -194,7 +194,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
         </h2>
         {routeInfo && (
           <button onClick={() => setShowSave(true)} className="btn-press" style={{
-            background: '#6C63FF', border: 'none', color: 'white',
+            background: '#3b82f6', border: 'none', color: 'white',
             borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
             fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
           }}>💾 Speichern</button>
@@ -212,7 +212,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
             </Marker>
           ))}
           {routeCoords.length > 0 && (
-            <Polyline positions={routeCoords} color="#6C63FF" weight={4} opacity={0.85} />
+            <Polyline positions={routeCoords} color="#3b82f6" weight={4} opacity={0.85} />
           )}
         </MapContainer>
       </div>
@@ -229,7 +229,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
           <div key={stop.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <div style={{
               width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-              background: index === 0 ? '#4ade80' : index === stops.length - 1 ? '#f43f5e' : '#6C63FF',
+              background: index === 0 ? '#4ade80' : index === stops.length - 1 ? '#f43f5e' : '#3b82f6',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'white', fontSize: '11px', fontWeight: '700',
               fontFamily: "'Barlow', sans-serif"
@@ -276,7 +276,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
         }}>
           <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px', fontFamily: "'Barlow', sans-serif" }}>
             ⛽ BENZINKOSTEN
-            {bike && <span style={{ color: '#6C63FF', marginLeft: '6px' }}>({bike.brand} {bike.model})</span>}
+            {bike && <span style={{ color: '#3b82f6', marginLeft: '6px' }}>({bike.brand} {bike.model})</span>}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
@@ -308,7 +308,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
           className="btn-press"
           style={{
             width: '100%',
-            background: stops.filter(s => s.coords).length >= 2 ? '#6C63FF' : t.border,
+            background: stops.filter(s => s.coords).length >= 2 ? '#3b82f6' : t.border,
             border: 'none', color: 'white', borderRadius: '10px', padding: '14px',
             cursor: stops.filter(s => s.coords).length >= 2 ? 'pointer' : 'default',
             fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
@@ -321,41 +321,41 @@ export default function RoutePlanner({ darkMode, onClose }) {
         {/* Route Info */}
         {routeInfo && (
         <div style={{
-            background: '#6C63FF15', border: '1px solid #6C63FF44',
+            background: '#3b82f615', border: '1px solid #3b82f644',
             borderRadius: '12px', padding: '16px'
         }} className="animate-scaleIn">
-            <p style={{ color: '#6C63FF', fontSize: '13px', fontWeight: '700', marginBottom: '12px', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
+            <p style={{ color: '#3b82f6', fontSize: '13px', fontWeight: '700', marginBottom: '12px', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
             ROUTENINFO
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {[
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                 </svg>
                 ), label: 'Stopps', value: `${routeInfo.stops}` },
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                 </svg>
                 ), label: 'Strecke', value: `${routeInfo.distance} km` },
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                 </svg>
                 ), label: 'Dauer', value: formatDuration(routeInfo.duration) },
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 22V8l9-6 9 6v14"/><path d="M9 22V12h6v10"/>
                 </svg>
                 ), label: 'Benzin', value: `${routeInfo.fuelNeeded} L` },
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
                 </svg>
                 ), label: 'Kosten', value: `${routeInfo.fuelCost} €` },
                 { icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
                     <circle cx="12" cy="10" r="3"/>
                 </svg>
@@ -404,7 +404,7 @@ export default function RoutePlanner({ darkMode, onClose }) {
                 cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif"
               }}>Abbrechen</button>
               <button onClick={saveRoute} disabled={saving} className="btn-press" style={{
-                flex: 2, background: '#6C63FF', border: 'none', color: 'white',
+                flex: 2, background: '#3b82f6', border: 'none', color: 'white',
                 borderRadius: '8px', padding: '12px', cursor: 'pointer',
                 fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
               }}>{saving ? 'Speichern...' : '💾 Speichern'}</button>

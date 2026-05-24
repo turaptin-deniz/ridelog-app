@@ -64,7 +64,7 @@ export default function Badges({ darkMode }) {
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.bg }}>
-      <p style={{ color: '#6C63FF' }}>Laden...</p>
+      <p style={{ color: '#3b82f6' }}>Laden...</p>
     </div>
   )
 
@@ -143,7 +143,7 @@ export default function Badges({ darkMode }) {
             borderRadius: '10px', padding: '14px'
           }}>
             <p style={{ fontSize: '22px', marginBottom: '6px' }}>{stat.icon}</p>
-            <p style={{ fontSize: '20px', fontWeight: '700', color: '#6C63FF', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: '#3b82f6', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
             <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
           </div>
         ))}
@@ -160,8 +160,8 @@ export default function Badges({ darkMode }) {
             const unlocked = badge.condition(profile || {})
             return (
               <div key={badge.type} style={{
-                background: earned ? '#6C63FF22' : t.surface,
-                border: `1px solid ${earned ? '#6C63FF' : t.border}`,
+                background: earned ? '#3b82f622' : t.surface,
+                border: `1px solid ${earned ? '#3b82f6' : t.border}`,
                 borderRadius: '10px', padding: '12px', textAlign: 'center',
                 opacity: unlocked || earned ? 1 : 0.4,
                 transition: 'all 0.2s'
@@ -169,7 +169,7 @@ export default function Badges({ darkMode }) {
                 <p style={{ fontSize: '28px', marginBottom: '6px', filter: !unlocked && !earned ? 'grayscale(1)' : 'none' }}>
                   {badge.icon}
                 </p>
-                <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#6C63FF' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#3b82f6' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
                   {badge.label}
                 </p>
                 <p style={{ fontSize: '10px', color: t.muted, lineHeight: '1.3' }}>
@@ -177,7 +177,7 @@ export default function Badges({ darkMode }) {
                 </p>
                 {unlocked && !earned && (
                   <div style={{
-                    marginTop: '6px', background: '#6C63FF', borderRadius: '4px',
+                    marginTop: '6px', background: '#3b82f6', borderRadius: '4px',
                     padding: '3px 6px', fontSize: '9px', color: 'white', fontWeight: '700'
                   }}>VERDIENT!</div>
                 )}

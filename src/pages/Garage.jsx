@@ -24,14 +24,14 @@ function BikeImage({ brand, model, year }) {
   return imgError ? (
     <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="120" height="60" viewBox="0 0 120 60" fill="none">
-        <circle cx="25" cy="42" r="14" stroke="#6C63FF" strokeWidth="2.5" fill="none"/>
-        <circle cx="95" cy="42" r="14" stroke="#6C63FF" strokeWidth="2.5" fill="none"/>
-        <circle cx="25" cy="42" r="4" fill="#6C63FF"/>
-        <circle cx="95" cy="42" r="4" fill="#6C63FF"/>
-        <path d="M25 28 L45 18 L75 18 L95 28 L95 42 L25 42 Z" stroke="#6C63FF" strokeWidth="2" fill="#6C63FF22" strokeLinejoin="round"/>
-        <path d="M45 18 L50 10 L70 10 L75 18" stroke="#6C63FF" strokeWidth="1.5" fill="#6C63FF11"/>
-        <path d="M95 28 L108 30 L108 38 L95 38" stroke="#6C63FF" strokeWidth="1.5" fill="none"/>
-        <line x1="25" y1="28" x2="15" y2="32" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round"/>
+        <circle cx="25" cy="42" r="14" stroke="#3b82f6" strokeWidth="2.5" fill="none"/>
+        <circle cx="95" cy="42" r="14" stroke="#3b82f6" strokeWidth="2.5" fill="none"/>
+        <circle cx="25" cy="42" r="4" fill="#3b82f6"/>
+        <circle cx="95" cy="42" r="4" fill="#3b82f6"/>
+        <path d="M25 28 L45 18 L75 18 L95 28 L95 42 L25 42 Z" stroke="#3b82f6" strokeWidth="2" fill="#3b82f622" strokeLinejoin="round"/>
+        <path d="M45 18 L50 10 L70 10 L75 18" stroke="#3b82f6" strokeWidth="1.5" fill="#3b82f611"/>
+        <path d="M95 28 L108 30 L108 38 L95 38" stroke="#3b82f6" strokeWidth="1.5" fill="none"/>
+        <line x1="25" y1="28" x2="15" y2="32" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round"/>
       </svg>
     </div>
   ) : (
@@ -48,7 +48,7 @@ function BikeCard({ bike, mods, selected, onClick }) {
   return (
     <div onClick={onClick} style={{
       background: '#111',
-      border: `2px solid ${selected ? '#6C63FF' : '#222'}`,
+      border: `2px solid ${selected ? '#3b82f6' : '#222'}`,
       borderRadius: '12px',
       padding: '12px',
       cursor: 'pointer',
@@ -57,7 +57,7 @@ function BikeCard({ bike, mods, selected, onClick }) {
       width: '200px'
     }}>
       <BikeImage brand={bike.brand} model={bike.model} year={bike.year} />
-      <p style={{ color: '#6C63FF', fontSize: '10px', fontWeight: '600', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{bike.brand}</p>
+      <p style={{ color: '#3b82f6', fontSize: '10px', fontWeight: '600', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{bike.brand}</p>
       <p style={{ color: '#fff', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>{bike.model} {bike.year}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
         {bike.hp && <div style={{ background: '#1a1a1a', borderRadius: '6px', padding: '6px 8px' }}>
@@ -204,7 +204,7 @@ export default function Garage({ darkMode }) {
           />
         ))}
         <button onClick={onSave} style={{
-          width: '100%', background: '#6C63FF', color: 'white', border: 'none',
+          width: '100%', background: '#3b82f6', color: 'white', border: 'none',
           borderRadius: '8px', padding: '14px', cursor: 'pointer', fontSize: '14px', fontWeight: '600'
         }}>Speichern</button>
       </div>
@@ -213,7 +213,7 @@ export default function Garage({ darkMode }) {
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.bg }}>
-      <p style={{ color: '#6C63FF' }}>Laden...</p>
+      <p style={{ color: '#3b82f6' }}>Laden...</p>
     </div>
   )
 
@@ -223,7 +223,7 @@ export default function Garage({ darkMode }) {
       <div style={{ padding: '16px', borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Meine Garage</h2>
         <button onClick={() => setShowAddBike(true)} style={{
-          background: '#6C63FF', color: 'white', border: 'none',
+          background: '#3b82f6', color: 'white', border: 'none',
           borderRadius: '6px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px'
         }}>+ Motorrad</button>
       </div>
@@ -233,7 +233,7 @@ export default function Garage({ darkMode }) {
           <p style={{ fontSize: '40px', marginBottom: '12px' }}>🏍️</p>
           <p style={{ color: t.muted, fontSize: '14px', marginBottom: '16px' }}>Noch kein Motorrad in der Garage</p>
           <button onClick={() => setShowAddBike(true)} style={{
-            background: '#6C63FF', color: 'white', border: 'none',
+            background: '#3b82f6', color: 'white', border: 'none',
             borderRadius: '6px', padding: '10px 20px', cursor: 'pointer', fontSize: '14px'
           }}>Motorrad hinzufügen</button>
         </div>
@@ -257,7 +257,7 @@ export default function Garage({ darkMode }) {
               {/* Edit / Delete Buttons */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <button onClick={() => { setEditBike({...selectedBike}); setShowEditBike(true) }} style={{
-                  flex: 1, background: 'transparent', color: '#6C63FF', border: `1px solid #6C63FF`,
+                  flex: 1, background: 'transparent', color: '#3b82f6', border: `1px solid #3b82f6`,
                   borderRadius: '6px', padding: '8px', cursor: 'pointer', fontSize: '13px'
                 }}>✏️ Bearbeiten</button>
                 <button onClick={() => deleteBike(selectedBike.id)} style={{
@@ -269,7 +269,7 @@ export default function Garage({ darkMode }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: '600' }}>Modifikationen</h3>
                 <button onClick={() => setShowAddMod(true)} style={{
-                  background: 'transparent', color: '#6C63FF', border: `1px solid #6C63FF`,
+                  background: 'transparent', color: '#3b82f6', border: `1px solid #3b82f6`,
                   borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px'
                 }}>+ Hinzufügen</button>
               </div>
@@ -336,7 +336,7 @@ export default function Garage({ darkMode }) {
               onChange={e => setNewMod({...newMod, notes: e.target.value})}
               style={{ ...inputStyle, height: '80px', resize: 'none' }} />
             <button onClick={addMod} style={{
-              width: '100%', background: '#6C63FF', color: 'white', border: 'none',
+              width: '100%', background: '#3b82f6', color: 'white', border: 'none',
               borderRadius: '8px', padding: '14px', cursor: 'pointer', fontSize: '14px', fontWeight: '600'
             }}>Speichern</button>
           </div>

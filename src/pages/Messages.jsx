@@ -175,7 +175,7 @@ export default function Messages({ darkMode }) {
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.bg }}>
-      <p style={{ color: '#6C63FF' }}>Laden...</p>
+      <p style={{ color: '#3b82f6' }}>Laden...</p>
     </div>
   )
 
@@ -186,7 +186,7 @@ export default function Messages({ darkMode }) {
       {/* Chat Header */}
       <div style={{ padding: '12px 16px', borderBottom: `1px solid ${t.border}`, background: t.surface, display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
         <button onClick={() => { setView('list'); setActiveChat(null) }} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '20px', padding: '0' }}>←</button>
-        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
           {activeChat.avatar_url
             ? <img src={activeChat.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : activeChat.username?.slice(0,2).toUpperCase()}
@@ -216,7 +216,7 @@ export default function Messages({ darkMode }) {
             <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
               <div style={{
                 maxWidth: '75%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                background: isMe ? '#6C63FF' : t.surface,
+                background: isMe ? '#3b82f6' : t.surface,
                 border: isMe ? 'none' : `1px solid ${t.border}`
               }}>
                 <p style={{ color: isMe ? 'white' : t.text, fontSize: '14px', lineHeight: '1.4', fontFamily: "'Barlow', sans-serif" }}>{msg.content}</p>
@@ -238,7 +238,7 @@ export default function Messages({ darkMode }) {
           style={{ ...inputStyle, flex: 1 }}
         />
         <button onClick={sendMessage} disabled={!newMessage.trim()} className="btn-press" style={{
-          background: newMessage.trim() ? '#6C63FF' : t.border,
+          background: newMessage.trim() ? '#3b82f6' : t.border,
           border: 'none', borderRadius: '50%', width: '40px', height: '40px',
           cursor: newMessage.trim() ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
@@ -267,7 +267,7 @@ export default function Messages({ darkMode }) {
       ) : (
         requests.map(req => (
           <div key={req.id} style={{ padding: '14px 16px', borderBottom: `1px solid ${t.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '16px', flexShrink: 0 }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '16px', flexShrink: 0 }}>
               {req.sender?.username?.slice(0,2).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
@@ -276,7 +276,7 @@ export default function Messages({ darkMode }) {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => acceptRequest(req)} className="btn-press" style={{
-                background: '#6C63FF', border: 'none', color: 'white',
+                background: '#3b82f6', border: 'none', color: 'white',
                 borderRadius: '6px', padding: '8px 12px', cursor: 'pointer',
                 fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
               }}>✓</button>
@@ -303,7 +303,7 @@ export default function Messages({ darkMode }) {
           <div style={{ display: 'flex', gap: '8px' }}>
             {requests.length > 0 && (
               <button onClick={() => setView('requests')} style={{
-                background: '#6C63FF22', border: '1px solid #6C63FF44', color: '#6C63FF',
+                background: '#3b82f622', border: '1px solid #3b82f644', color: '#3b82f6',
                 borderRadius: '6px', padding: '6px 10px', cursor: 'pointer',
                 fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
               }}>📨 {requests.length}</button>
@@ -331,7 +331,7 @@ export default function Messages({ darkMode }) {
                     padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px',
                     cursor: 'pointer', borderBottom: `1px solid ${t.border}`
                   }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', position: 'relative', flexShrink: 0 }}>
                       {user.avatar_url
                         ? <img src={user.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                         : user.username?.slice(0,2).toUpperCase()}
@@ -364,10 +364,10 @@ export default function Messages({ darkMode }) {
             <div key={conv.profile?.id} onClick={() => openChat(conv.profile)} style={{
               padding: '14px 16px', borderBottom: `1px solid ${t.border}`,
               display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer',
-              background: conv.unread ? '#6C63FF0a' : 'transparent',
+              background: conv.unread ? '#3b82f60a' : 'transparent',
               transition: 'background 0.15s'
             }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '16px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '16px', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
                 {conv.profile?.avatar_url
                   ? <img src={conv.profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : conv.profile?.username?.slice(0,2).toUpperCase()}
@@ -387,7 +387,7 @@ export default function Messages({ darkMode }) {
                 </p>
               </div>
               {conv.unread && (
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#6C63FF', flexShrink: 0 }} />
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />
               )}
             </div>
           ))

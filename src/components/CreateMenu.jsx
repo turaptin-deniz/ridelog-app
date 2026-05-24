@@ -592,7 +592,7 @@ function StopRow({ stop, index, canRemove, onChange, onRemove }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 'var(--radius-base)',
         background: isMeetingPoint
-          ? 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)'
+          ? 'linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%)'
           : 'var(--color-surface-active)',
         color: isMeetingPoint ? 'white' : 'var(--color-text-secondary)',
         fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif",
@@ -722,13 +722,13 @@ function PrimaryButton({ onClick, disabled, label }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
       width: '100%', padding: 'var(--space-3)',
-      background: disabled ? 'var(--color-text-muted)' : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)',
+      background: disabled ? 'var(--color-text-muted)' : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%)',
       color: 'white', border: 'none',
       borderRadius: 'var(--radius-md)',
       fontSize: 'var(--font-size-base)', fontWeight: 700,
       fontFamily: 'var(--font-family-primary)',
       cursor: disabled ? 'not-allowed' : 'pointer',
-      boxShadow: disabled ? 'none' : '0 4px 15px rgba(255,107,53,0.25)',
+      boxShadow: disabled ? 'none' : '0 4px 15px rgba(59,130,246,0.25)',
       transition: 'all var(--transition-fast)'
     }}>{label}</button>
   )

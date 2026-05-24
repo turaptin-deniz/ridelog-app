@@ -162,7 +162,7 @@ const toggleFollow = async () => {
 
   if (loading) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: t.bg }}>
-      <p style={{ color: '#6C63FF' }}>Laden...</p>
+      <p style={{ color: '#3b82f6' }}>Laden...</p>
     </div>
   )
 
@@ -234,7 +234,7 @@ const toggleFollow = async () => {
                 background: 'var(--color-accent-primary)', border: `2px solid ${t.bg}`,
                 color: 'white', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(255,107,53,0.4)'
+                boxShadow: '0 2px 8px rgba(59,130,246,0.4)'
               }}>
                 {uploadingAvatar ? '...' : (
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -449,8 +449,8 @@ const toggleFollow = async () => {
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             flex: 1, padding: '12px 8px', background: 'transparent', border: 'none',
-            borderBottom: activeTab === tab.id ? '2px solid #6C63FF' : '2px solid transparent',
-            color: activeTab === tab.id ? '#6C63FF' : t.muted,
+            borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+            color: activeTab === tab.id ? '#3b82f6' : t.muted,
             cursor: 'pointer', fontSize: '12px', fontWeight: '600',
             fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s',
             whiteSpace: 'nowrap'
@@ -498,7 +498,7 @@ const toggleFollow = async () => {
                     <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '2px' }}>{route.title}</p>
                     <p style={{ color: t.muted, fontSize: '12px' }}>{route.region || 'Keine Region'} · {route.difficulty}</p>
                   </div>
-                  <p style={{ fontSize: '15px', fontWeight: '700', color: '#6C63FF' }}>{route.distance_km} km</p>
+                  <p style={{ fontSize: '15px', fontWeight: '700', color: '#3b82f6' }}>{route.distance_km} km</p>
                 </div>
               ))
             )}
@@ -518,12 +518,12 @@ const toggleFollow = async () => {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div>
-                      <p style={{ color: '#6C63FF', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{bike.brand}</p>
+                      <p style={{ color: '#3b82f6', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{bike.brand}</p>
                       <p style={{ color: '#fff', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{bike.model} {bike.year}</p>
                     </div>
-                    <div style={{ background: '#6C63FF22', borderRadius: '8px', padding: '6px 10px', textAlign: 'center' }}>
-                      <p style={{ color: '#6C63FF', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{bike.hp || '–'}</p>
-                      <p style={{ color: '#6C63FF', fontSize: '10px' }}>PS</p>
+                    <div style={{ background: '#3b82f622', borderRadius: '8px', padding: '6px 10px', textAlign: 'center' }}>
+                      <p style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{bike.hp || '–'}</p>
+                      <p style={{ color: '#3b82f6', fontSize: '10px' }}>PS</p>
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
@@ -613,8 +613,8 @@ const toggleFollow = async () => {
                 const unlocked = badge.condition(profile || {})
                 return (
                   <div key={badge.type} style={{
-                    background: earned ? '#6C63FF22' : t.surface,
-                    border: `1px solid ${earned ? '#6C63FF' : t.border}`,
+                    background: earned ? '#3b82f622' : t.surface,
+                    border: `1px solid ${earned ? '#3b82f6' : t.border}`,
                     borderRadius: '10px', padding: '12px', textAlign: 'center',
                     opacity: unlocked || earned ? 1 : 0.4,
                     transition: 'all 0.2s'
@@ -622,12 +622,12 @@ const toggleFollow = async () => {
                     <p style={{ fontSize: '26px', marginBottom: '6px', filter: !unlocked && !earned ? 'grayscale(1)' : 'none' }}>
                       {badge.icon}
                     </p>
-                    <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#6C63FF' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#3b82f6' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
                       {badge.label}
                     </p>
                     <p style={{ fontSize: '10px', color: t.muted, lineHeight: '1.3' }}>{badge.desc}</p>
                     {unlocked && !earned && (
-                      <div style={{ marginTop: '6px', background: '#6C63FF', borderRadius: '4px', padding: '3px 6px', fontSize: '9px', color: 'white', fontWeight: '700' }}>
+                      <div style={{ marginTop: '6px', background: '#3b82f6', borderRadius: '4px', padding: '3px 6px', fontSize: '9px', color: 'white', fontWeight: '700' }}>
                         VERDIENT!
                       </div>
                     )}

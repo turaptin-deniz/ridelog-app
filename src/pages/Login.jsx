@@ -50,7 +50,7 @@ export default function Login({ onLogin, darkMode, setDarkMode }) {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto var(--space-6)',
-            boxShadow: '0 0 30px rgba(255, 107, 53, 0.2)'
+            boxShadow: '0 0 30px rgba(59, 130, 246, 0.2)'
           }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="5" cy="17" r="3" />
@@ -179,7 +179,7 @@ export default function Login({ onLogin, darkMode, setDarkMode }) {
             width: '100%',
             padding: 'var(--space-3) var(--space-4)',
             marginBottom: 'var(--space-4)',
-            background: loading ? 'opacity: 0.6)' : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)',
+            background: loading ? 'opacity: 0.6)' : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-base)',
@@ -189,10 +189,10 @@ export default function Login({ onLogin, darkMode, setDarkMode }) {
             opacity: loading ? 0.6 : 1,
             transition: 'all var(--transition-fast)',
             fontFamily: 'var(--font-family-primary)',
-            boxShadow: '0 4px 15px rgba(255, 107, 53, 0.2)'
+            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
           }}
-          onMouseEnter={e => !loading && (e.target.style.boxShadow = '0 8px 25px rgba(255, 107, 53, 0.35)')}
-          onMouseLeave={e => !loading && (e.target.style.boxShadow = '0 4px 15px rgba(255, 107, 53, 0.2)')}
+          onMouseEnter={e => !loading && (e.target.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.35)')}
+          onMouseLeave={e => !loading && (e.target.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.2)')}
         >
           {loading ? '...' : isRegister ? 'Registrieren' : 'Anmelden'}
         </button>

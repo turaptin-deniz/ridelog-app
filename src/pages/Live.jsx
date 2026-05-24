@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-const createRiderIcon = (color = '#6C63FF', isMe = false) => L.divIcon({
+const createRiderIcon = (color = '#3b82f6', isMe = false) => L.divIcon({
   className: '',
   html: `<div style="
     width:${isMe ? 44 : 36}px;height:${isMe ? 44 : 36}px;border-radius:50%;
@@ -194,7 +194,7 @@ export default function Live({ darkMode }) {
       {/* Live Stats Bar */}
       {isLive && (
         <div style={{
-          background: 'linear-gradient(90deg, #6C63FF, #8B5CF6)',
+          background: 'linear-gradient(90deg, #3b82f6, #8B5CF6)',
           padding: '10px 16px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexShrink: 0
@@ -231,7 +231,7 @@ export default function Live({ darkMode }) {
 
           {/* My position */}
           {myPosition && (
-            <Marker position={myPosition} icon={createRiderIcon('#6C63FF', true)}>
+            <Marker position={myPosition} icon={createRiderIcon('#3b82f6', true)}>
               <Popup>
                 <div style={{ fontFamily: "'Barlow', sans-serif" }}>
                   <p style={{ fontWeight: '700' }}>Du</p>
@@ -268,7 +268,7 @@ export default function Live({ darkMode }) {
         <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {isLive && (
             <button onClick={() => setFollowMe(!followMe)} style={{
-              background: followMe ? '#6C63FF' : 'rgba(0,0,0,0.7)',
+              background: followMe ? '#3b82f6' : 'rgba(0,0,0,0.7)',
               color: 'white', border: 'none', borderRadius: '8px',
               padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
               fontFamily: "'Barlow', sans-serif", fontWeight: '600'
@@ -308,10 +308,10 @@ export default function Live({ darkMode }) {
         <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
           {!isLive ? (
             <button onClick={startRide} className="btn-press" style={{
-              background: '#6C63FF', color: 'white', border: 'none',
+              background: '#3b82f6', color: 'white', border: 'none',
               borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
               fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
-              boxShadow: '0 4px 24px rgba(108,99,255,0.6)', letterSpacing: '0.5px'
+              boxShadow: '0 4px 24px rgba(59,130,246,0.6)', letterSpacing: '0.5px'
             }}>🏍️ RIDE STARTEN</button>
           ) : (
             <button onClick={stopRide} className="btn-press" style={{
@@ -380,7 +380,7 @@ export default function Live({ darkMode }) {
               ].map(stat => (
                 <div key={stat.label} style={{ background: '#1a1a1a', borderRadius: '10px', padding: '14px' }}>
                   <p style={{ fontSize: '20px', marginBottom: '4px' }}>{stat.icon}</p>
-                  <p style={{ color: '#6C63FF', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
+                  <p style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
                   <p style={{ color: '#555', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
                 </div>
               ))}
@@ -393,7 +393,7 @@ export default function Live({ darkMode }) {
                 cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
               }}>Schließen</button>
               <button onClick={() => setShowStats(false)} className="btn-press" style={{
-                flex: 2, background: '#6C63FF', border: 'none',
+                flex: 2, background: '#3b82f6', border: 'none',
                 color: 'white', borderRadius: '8px', padding: '12px',
                 cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
               }}>Tour teilen 🚀</button>

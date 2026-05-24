@@ -96,7 +96,7 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
       case 'medium': return '#facc15'
       case 'hard': return '#f97316'
       case 'expert': return '#f43f5e'
-      default: return '#6C63FF'
+      default: return '#3b82f6'
     }
   }
 
@@ -144,8 +144,8 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             flex: 1, padding: '12px', background: 'transparent', border: 'none',
-            borderBottom: activeTab === tab.id ? '2px solid #6C63FF' : '2px solid transparent',
-            color: activeTab === tab.id ? '#6C63FF' : t.muted,
+            borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+            color: activeTab === tab.id ? '#3b82f6' : t.muted,
             cursor: 'pointer', fontSize: '14px', fontWeight: '700',
             fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s'
           }}>{tab.label}</button>
@@ -156,7 +156,7 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-            <p style={{ color: '#6C63FF' }}>Laden...</p>
+            <p style={{ color: '#3b82f6' }}>Laden...</p>
           </div>
         ) : activeTab === 'users' ? (
           <>
@@ -181,7 +181,7 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div style={{
                         width: '50px', height: '50px', borderRadius: '50%',
-                        background: '#6C63FF', display: 'flex', alignItems: 'center',
+                        background: '#3b82f6', display: 'flex', alignItems: 'center',
                         justifyContent: 'center', color: 'white', fontWeight: '700',
                         fontSize: '16px', overflow: 'hidden'
                       }}>
@@ -226,7 +226,7 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
 
                     {/* Follow Button */}
                     <button onClick={e => { e.stopPropagation(); toggleFollow(user.id) }} className="btn-press" style={{
-                      background: isFollowing ? 'transparent' : '#6C63FF',
+                      background: isFollowing ? 'transparent' : '#3b82f6',
                       border: isFollowing ? `1px solid ${t.border}` : 'none',
                       color: isFollowing ? t.muted : 'white',
                       borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
@@ -279,17 +279,17 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
                     {[
                       { icon: (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round">
                           <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                         </svg>
                       ), value: `${route.distance_km} km` },
                       route.duration_minutes && { icon: (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round">
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
                       ), value: `${Math.floor(route.duration_minutes/60)}h ${route.duration_minutes%60}min` },
                       route.surface && { icon: (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round">
                           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                         </svg>
                       ), value: route.surface === 'asphalt' ? 'Asphalt' : route.surface === 'gravel' ? 'Schotter' : 'Gemischt' },
@@ -303,12 +303,12 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
 
                   {/* Author */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: '700', overflow: 'hidden' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: '700', overflow: 'hidden' }}>
                       {route.profiles?.avatar_url
                         ? <img src={route.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : route.profiles?.username?.slice(0,2).toUpperCase()}
                     </div>
-                    <p style={{ color: t.muted, fontSize: '11px' }}>von <span style={{ color: '#6C63FF', fontWeight: '700' }}>@{route.profiles?.username}</span></p>
+                    <p style={{ color: t.muted, fontSize: '11px' }}>von <span style={{ color: '#3b82f6', fontWeight: '700' }}>@{route.profiles?.username}</span></p>
                   </div>
                 </div>
               ))

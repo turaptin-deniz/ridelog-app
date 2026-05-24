@@ -8,9 +8,9 @@ const numberedMarker = (n, accent = false) => L.divIcon({
   className: '',
   html: `<div style="
     width:28px;height:28px;border-radius:50%;
-    background:${accent ? '#ff6b35' : '#ffffff'};
+    background:${accent ? '#3b82f6' : '#ffffff'};
     color:${accent ? '#ffffff' : '#111111'};
-    border:2px solid ${accent ? '#ffffff' : '#ff6b35'};
+    border:2px solid ${accent ? '#ffffff' : '#3b82f6'};
     display:flex;align-items:center;justify-content:center;
     font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;
     box-shadow:0 2px 8px rgba(0,0,0,0.4);
@@ -302,7 +302,7 @@ export default function Feed({ darkMode }) {
       {/* Original Post */}
       <div style={{ padding: '14px 16px', borderBottom: `1px solid ${t.border}`, background: t.surface }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0, overflow: 'hidden' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0, overflow: 'hidden' }}>
             {activeComments.profiles?.avatar_url
               ? <img src={activeComments.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : activeComments.profiles?.username?.slice(0,2).toUpperCase()}
@@ -326,14 +326,14 @@ export default function Feed({ darkMode }) {
         ) : (
           comments.map(comment => (
             <div key={comment.id} style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
                 {comment.profiles?.avatar_url
                   ? <img src={comment.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : comment.profiles?.username?.slice(0,2).toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '12px', padding: '10px 12px' }}>
-                  <p style={{ fontWeight: '700', fontSize: '12px', color: '#6C63FF', marginBottom: '4px' }}>@{comment.profiles?.username}</p>
+                  <p style={{ fontWeight: '700', fontSize: '12px', color: '#3b82f6', marginBottom: '4px' }}>@{comment.profiles?.username}</p>
                   <p style={{ fontSize: '13px', color: t.text, lineHeight: '1.5' }}>{comment.content}</p>
                 </div>
                 <p style={{ color: t.muted, fontSize: '11px', marginTop: '4px', marginLeft: '4px' }}>{formatTime(comment.created_at)}</p>
@@ -358,7 +358,7 @@ export default function Feed({ darkMode }) {
           }}
         />
         <button onClick={sendComment} disabled={!newComment.trim()} style={{
-          background: newComment.trim() ? '#6C63FF' : t.border,
+          background: newComment.trim() ? '#3b82f6' : t.border,
           border: 'none', borderRadius: '50%', width: '38px', height: '38px',
           cursor: newComment.trim() ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
@@ -422,7 +422,7 @@ export default function Feed({ darkMode }) {
         <>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
-            <p style={{ color: '#6C63FF' }}>Laden...</p>
+            <p style={{ color: '#3b82f6' }}>Laden...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
           <div style={{ padding: '60px 20px', textAlign: 'center' }}>
@@ -436,7 +436,7 @@ export default function Feed({ darkMode }) {
 
               {/* Post Header */}
               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#6C63FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0 }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0 }}>
                   {post.profiles?.avatar_url
                     ? <img src={post.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : post.profiles?.username?.slice(0,2).toUpperCase() || '??'}
@@ -537,10 +537,10 @@ export default function Feed({ darkMode }) {
       {/* Create Post Button */}
       <button onClick={() => setShowCreate(true)} className="btn-press" style={{
         position: 'absolute', bottom: '70px', right: 'calc(50% - 224px)',
-        background: '#6C63FF', border: 'none', borderRadius: '50%',
+        background: '#3b82f6', border: 'none', borderRadius: '50%',
         width: '52px', height: '52px', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 20px rgba(108,99,255,0.5)', zIndex: 100
+        boxShadow: '0 4px 20px rgba(59,130,246,0.5)', zIndex: 100
       }}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -609,7 +609,7 @@ export default function Feed({ darkMode }) {
                 cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
               }}>Abbrechen</button>
               <button onClick={createPost} disabled={uploading} className="btn-press" style={{
-                flex: 2, background: '#6C63FF', border: 'none', color: 'white',
+                flex: 2, background: '#3b82f6', border: 'none', color: 'white',
                 borderRadius: '8px', padding: '12px', cursor: 'pointer',
                 fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
               }}>{uploading ? 'Hochladen...' : 'Posten'}</button>
@@ -714,8 +714,8 @@ function MeetupCard({ m, t, onClick }) {
         {typeof m.distance === 'number' && (
           <span style={{
             flexShrink: 0,
-            background: 'rgba(255,107,53,0.12)',
-            border: '1px solid rgba(255,107,53,0.25)',
+            background: 'rgba(59,130,246,0.12)',
+            border: '1px solid rgba(59,130,246,0.25)',
             borderRadius: '50px', padding: '2px 8px',
             fontSize: '11px', fontWeight: 700,
             color: 'var(--color-accent-primary)',
@@ -915,7 +915,7 @@ function MeetupDetail({ meetup, currentUser, t, onClose }) {
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {polyline.length > 1 && (
-                <Polyline positions={polyline} color="#ff6b35" weight={4} opacity={0.85} />
+                <Polyline positions={polyline} color="#3b82f6" weight={4} opacity={0.85} />
               )}
               {stops.map((s, i) => (
                 <Marker key={i} position={[s.lat, s.lng]} icon={numberedMarker(i === 0 ? 'A' : (i + 1), i === 0)} />
@@ -1066,7 +1066,7 @@ function MeetupDetail({ meetup, currentUser, t, onClose }) {
                   ? 'transparent'
                   : atCapacity
                     ? 'var(--color-text-muted)'
-                    : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)',
+                    : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #2563eb 100%)',
                 color: isJoined ? 'var(--color-danger)' : 'white',
                 border: isJoined ? '1px solid var(--color-danger)' : 'none',
                 borderRadius: 'var(--radius-md)',
@@ -1074,7 +1074,7 @@ function MeetupDetail({ meetup, currentUser, t, onClose }) {
                 fontFamily: 'var(--font-family-primary)',
                 cursor: (joining || atCapacity) ? 'not-allowed' : 'pointer',
                 transition: 'all var(--transition-fast)',
-                boxShadow: isJoined ? 'none' : '0 4px 15px rgba(255,107,53,0.25)'
+                boxShadow: isJoined ? 'none' : '0 4px 15px rgba(59,130,246,0.25)'
               }}
             >
               {joining ? '…' : atCapacity ? 'Voll besetzt' : isJoined ? 'Abmelden' : 'Teilnehmen'}
@@ -1083,8 +1083,8 @@ function MeetupDetail({ meetup, currentUser, t, onClose }) {
           {isOwner && (
             <div style={{
               textAlign: 'center', padding: 'var(--space-3)',
-              background: 'rgba(255,107,53,0.1)',
-              border: '1px solid rgba(255,107,53,0.2)',
+              background: 'rgba(59,130,246,0.1)',
+              border: '1px solid rgba(59,130,246,0.2)',
               borderRadius: 'var(--radius-md)',
               color: 'var(--color-accent-primary)',
               fontSize: '12px', fontWeight: 600, fontFamily: "'Barlow', sans-serif"

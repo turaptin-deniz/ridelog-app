@@ -154,7 +154,7 @@ function App() {
             background: `linear-gradient(135deg, ${t.accent} 0%, var(--color-accent-secondary) 100%)`,
             borderRadius: 'var(--radius-md)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(255, 107, 53, 0.25)',
+            boxShadow: '0 0 16px rgba(59, 130, 246, 0.25)',
             flexShrink: 0
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -256,22 +256,22 @@ function App() {
               onClick={() => setShowCreate(true)}
               style={{
                 width: '52px', height: '52px',
-                background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
+                background: `linear-gradient(135deg, ${t.accent} 0%, #2563eb 100%)`,
                 border: 'none', borderRadius: '50%',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(255,107,53,0.45)',
+                boxShadow: '0 4px 16px rgba(59,130,246,0.45)',
                 transform: 'translateY(-12px)',
                 transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)',
                 position: 'relative', zIndex: 1700
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-14px) scale(1.05)'
-                e.currentTarget.style.boxShadow = '0 6px 22px rgba(255,107,53,0.6)'
+                e.currentTarget.style.boxShadow = '0 6px 22px rgba(59,130,246,0.6)'
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(-12px) scale(1)'
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,107,53,0.45)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(59,130,246,0.45)'
               }}
             >
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
@@ -349,9 +349,9 @@ function App() {
                   left: darkMode ? 'calc(50% + 0px)' : '4px',
                   width: 'calc(50% - 4px)',
                   height: 'calc(100% - 8px)',
-                  background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
+                  background: `linear-gradient(135deg, ${t.accent} 0%, #2563eb 100%)`,
                   borderRadius: 'var(--radius-full)',
-                  boxShadow: '0 2px 10px rgba(255, 107, 53, 0.35)',
+                  boxShadow: '0 2px 10px rgba(59, 130, 246, 0.35)',
                   transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
                   zIndex: 1
                 }} />
@@ -479,7 +479,7 @@ function App() {
               ].map(lang => (
                 <button key={lang.id} onClick={() => { setSelectedLanguage(lang.id); setShowLanguage(false) }} style={{
                   width: '100%',
-                  background: selectedLanguage === lang.id ? 'rgba(255,107,53,0.12)' : t.bg,
+                  background: selectedLanguage === lang.id ? 'rgba(59,130,246,0.12)' : t.bg,
                   border: `1px solid ${selectedLanguage === lang.id ? t.accent : t.border}`,
                   color: t.text, borderRadius: 'var(--radius-md)',
                   padding: 'var(--space-3) var(--space-4)', cursor: 'pointer',
