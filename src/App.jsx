@@ -238,12 +238,13 @@ function App() {
         <div style={{
           display: 'flex', borderTop: `1px solid ${t.border}`,
           background: t.surface, flexShrink: 0, paddingBottom: 'var(--space-1)',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'relative', zIndex: 1500, overflow: 'visible'
         }}>
           {NAV_LEFT.map(item => <NavBtn key={item.id} item={item} />)}
 
           {/* Center Plus Button */}
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 1600 }}>
             <button
               onClick={() => {
                 // Trigger create action on current page
@@ -257,7 +258,8 @@ function App() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 16px rgba(255,107,53,0.45)',
                 transform: 'translateY(-12px)',
-                transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)'
+                transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)',
+                position: 'relative', zIndex: 1700
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-14px) scale(1.05)'

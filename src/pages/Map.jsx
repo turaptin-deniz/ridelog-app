@@ -291,14 +291,15 @@ export default function Map({ darkMode, onSelectRider }) {
           ))}
         </div>
 
-        {/* Route Planner Button */}
+        {/* Route Planner Button — top right, no emoji */}
         <button onClick={() => setShowPlanner(true)} style={{
-          position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
+          position: 'absolute', top: '12px', right: '12px', zIndex: 1000,
           background: 'rgba(0,0,0,0.75)', color: 'white', border: 'none',
-          borderRadius: '8px', padding: '8px 12px', cursor: 'pointer',
+          borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
           fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600',
-          backdropFilter: 'blur(4px)'
-        }}>🗺️ Planen</button>
+          backdropFilter: 'blur(4px)',
+          letterSpacing: '0.03em'
+        }}>Planen</button>
 
         {/* Live Mode Controls */}
         {activeMode === 'live' && (
@@ -359,14 +360,21 @@ export default function Map({ darkMode, onSelectRider }) {
           </>
         )}
 
-        {/* Live Riders Button */}
+        {/* Live Riders Button — bottom left over the map */}
         {liveRiders.length > 0 && (
           <button onClick={() => setShowRiders(!showRiders)} style={{
-            position: 'absolute', top: '56px', right: '10px', zIndex: 1000,
+            position: 'absolute', bottom: '20px', left: '12px', zIndex: 1000,
             background: 'rgba(0,0,0,0.75)', color: 'white', border: 'none',
-            borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
-            fontFamily: "'Barlow', sans-serif", fontWeight: '600', backdropFilter: 'blur(4px)'
-          }}>🔴 {liveRiders.length} Live</button>
+            borderRadius: '50px', padding: '8px 14px', cursor: 'pointer', fontSize: '12px',
+            fontFamily: "'Barlow', sans-serif", fontWeight: '600', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <span style={{
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: '#f43f5e', display: 'inline-block'
+            }} className="animate-pulse" />
+            {liveRiders.length} Live
+          </button>
         )}
       </div>
 
