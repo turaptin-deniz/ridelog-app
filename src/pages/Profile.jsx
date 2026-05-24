@@ -38,19 +38,17 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
-  const [editingImages, setEditingImages] = useState(false)
   const [editData, setEditData] = useState({ username: '', bio: '', location: '' })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const avatarRef = useRef()
   const bannerRef = useRef()
 
-  // Listen for global plus-button click → open edit modal when on profile page
+  // Listen for global plus-button click → enter edit mode when on profile page
   useEffect(() => {
     const handlePlus = (e) => {
       if (e.detail?.page === 'profil') {
         setEditing(true)
-        setEditingImages(true)
       }
     }
     window.addEventListener('ridelog:plus-click', handlePlus)
@@ -111,7 +109,17 @@ const toggleFollow = async () => {
   const saveProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('profiles').update(editData).eq('id', user.id).select().single()
-    if (data) { setProfile(data); setEditing(false) }
+    if (data) setProfile(data)
+    setEditing(false)
+  }
+
+  const cancelEdit = () => {
+    setEditData({
+      username: profile?.username || '',
+      bio: profile?.bio || '',
+      location: profile?.location || ''
+    })
+    setEditing(false)
   }
 
   const uploadImage = async (file, bucket, type) => {
@@ -154,13 +162,6 @@ const toggleFollow = async () => {
     return idx < LEAGUES.length - 1 ? LEAGUES[idx + 1] : null
   }
 
-  const inputStyle = {
-    width: '100%', background: t.bg, border: `1px solid ${t.border}`,
-    borderRadius: '8px', padding: '12px', color: t.text,
-    fontSize: '14px', boxSizing: 'border-box', marginBottom: '12px',
-    fontFamily: "'Barlow', sans-serif"
-  }
-
   const initials = profile?.username?.slice(0, 2).toUpperCase() || '??'
   const totalKm = routes.reduce((sum, r) => sum + (r.distance_km || 0), 0)
   const league = getCurrentLeague()
@@ -181,22 +182,41 @@ const toggleFollow = async () => {
       <div style={{ position: 'relative', height: '130px' }}>
         {profile?.banner_url
           ? <img src={profile.banner_url} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #6C63FF33, #6C63FF77)' }} />
+          : <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${t.accent}33, ${t.accent}77)` }} />
         }
-        {editingImages && (
-          <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px' }}>
-            <button onClick={() => bannerRef.current.click()} style={{
-              background: 'rgba(0,0,0,0.65)', border: 'none', color: 'white',
-              borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px',
-              fontFamily: "'Barlow', sans-serif"
-            }}>{uploadingBanner ? '...' : '📷 Banner'}</button>
-            {profile?.banner_url && (
-              <button onClick={() => deleteImage('banner')} style={{
-                background: 'rgba(200,0,0,0.75)', border: 'none', color: 'white',
-                borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px'
-              }}>🗑️</button>
-            )}
-          </div>
+        {editing && (
+          <>
+            {/* Dim overlay so buttons stand out */}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)' }} />
+            <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px', zIndex: 2 }}>
+              <button onClick={() => bannerRef.current.click()} style={{
+                background: 'rgba(0,0,0,0.7)', border: 'none', color: 'white',
+                borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
+                fontFamily: "'Barlow', sans-serif", fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: '6px',
+                backdropFilter: 'blur(4px)'
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                {uploadingBanner ? '...' : 'Banner'}
+              </button>
+              {profile?.banner_url && (
+                <button onClick={() => deleteImage('banner')} style={{
+                  background: 'rgba(200,30,30,0.85)', border: 'none', color: 'white',
+                  borderRadius: '8px', padding: '8px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', backdropFilter: 'blur(4px)'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          </>
         )}
         <input ref={bannerRef} type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => e.target.files[0] && uploadImage(e.target.files[0], 'banners', 'banner')} />
@@ -215,23 +235,35 @@ const toggleFollow = async () => {
               ? <img src={profile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : initials}
           </div>
-          {editingImages && (
+          {editing && (
             <>
               <button onClick={() => avatarRef.current.click()} style={{
                 position: 'absolute', bottom: '0', right: '0',
-                width: '26px', height: '26px', borderRadius: '50%',
+                width: '28px', height: '28px', borderRadius: '50%',
                 background: 'var(--color-accent-primary)', border: `2px solid ${t.bg}`,
-                color: 'white', cursor: 'pointer', fontSize: '12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>{uploadingAvatar ? '...' : '✎'}</button>
+                color: 'white', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(255,107,53,0.4)'
+              }}>
+                {uploadingAvatar ? '...' : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                )}
+              </button>
               {profile?.avatar_url && (
                 <button onClick={() => deleteImage('avatar')} style={{
                   position: 'absolute', top: '0', right: '0',
-                  width: '22px', height: '22px', borderRadius: '50%',
-                  background: 'rgba(200,0,0,0.85)', border: 'none',
-                  color: 'white', cursor: 'pointer', fontSize: '11px',
+                  width: '24px', height: '24px', borderRadius: '50%',
+                  background: 'rgba(200,30,30,0.9)', border: `2px solid ${t.bg}`,
+                  color: 'white', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>✕</button>
+                }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
               )}
             </>
           )}
@@ -242,48 +274,153 @@ const toggleFollow = async () => {
 
       {/* Info */}
       <div style={{ padding: '0 16px 12px', borderBottom: `1px solid ${t.border}` }}>
-        {/* Name + Edit Icon in einer Zeile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
-            @{profile?.username}
-          </h2>
-          {/* Edit Icon direkt neben Name */}
+        {/* Name + Edit/Save Icon in einer Zeile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          {editing ? (
+            <input
+              type="text"
+              value={editData.username}
+              onChange={e => setEditData({ ...editData, username: e.target.value })}
+              placeholder="username"
+              autoFocus
+              style={{
+                flex: 1, minWidth: 0,
+                fontSize: '20px', fontWeight: '700',
+                fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px',
+                background: t.bg, border: `1px solid ${t.border}`,
+                borderRadius: '8px', padding: '6px 10px',
+                color: t.text, outline: 'none',
+                transition: 'border-color 0.15s'
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+              onBlur={e => e.target.style.borderColor = t.border}
+            />
+          ) : (
+            <h2 style={{ fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
+              @{profile?.username}
+            </h2>
+          )}
+
+          {/* Edit / Save Toggle Icon */}
           <button
-            onClick={() => { setEditing(true); setEditingImages(true) }}
+            onClick={editing ? saveProfile : () => setEditing(true)}
             style={{
-              background: 'transparent', border: 'none', padding: '4px',
-              cursor: 'pointer', color: t.muted, display: 'flex', alignItems: 'center',
-              transition: 'color 0.15s'
+              background: editing ? 'var(--color-accent-primary)' : 'transparent',
+              border: editing ? 'none' : 'none',
+              padding: editing ? '6px' : '4px',
+              borderRadius: editing ? '8px' : '4px',
+              cursor: 'pointer',
+              color: editing ? 'white' : t.muted,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+              flexShrink: 0
             }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent-primary)'}
-            onMouseLeave={e => e.currentTarget.style.color = t.muted}
+            onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--color-accent-primary)' }}
+            onMouseLeave={e => { if (!editing) e.currentTarget.style.color = t.muted }}
+            title={editing ? 'Speichern' : 'Profil bearbeiten'}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+            {editing ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            )}
           </button>
-          {/* Liga Badge */}
-          <div style={{
-            background: league.color + '22', border: `1px solid ${league.color}66`,
-            borderRadius: '50px', padding: '2px 8px',
-            display: 'flex', alignItems: 'center', gap: '4px'
-          }}>
-            <span style={{ fontSize: '12px' }}>{league.icon}</span>
-            <span style={{ color: league.color, fontSize: '10px', fontWeight: '700', fontFamily: "'Barlow', sans-serif" }}>
-              {league.label.toUpperCase()}
-            </span>
-          </div>
+
+          {/* Cancel button — only when editing */}
+          {editing && (
+            <button
+              onClick={cancelEdit}
+              style={{
+                background: 'transparent', border: `1px solid ${t.border}`,
+                padding: '6px', borderRadius: '8px', cursor: 'pointer',
+                color: t.muted, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s', flexShrink: 0
+              }}
+              title="Abbrechen"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
+
+          {/* Liga Badge — only when not editing */}
+          {!editing && (
+            <div style={{
+              background: league.color + '22', border: `1px solid ${league.color}66`,
+              borderRadius: '50px', padding: '2px 8px',
+              display: 'flex', alignItems: 'center', gap: '4px'
+            }}>
+              <span style={{ fontSize: '12px' }}>{league.icon}</span>
+              <span style={{ color: league.color, fontSize: '10px', fontWeight: '700', fontFamily: "'Barlow', sans-serif" }}>
+                {league.label.toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
-        {profile?.location && (
-          <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+
+        {/* Location */}
+        {editing ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
-            {profile.location}
-          </p>
+            <input
+              type="text"
+              value={editData.location}
+              onChange={e => setEditData({ ...editData, location: e.target.value })}
+              placeholder="z.B. München, Bayern"
+              style={{
+                flex: 1, minWidth: 0,
+                fontSize: '13px',
+                fontFamily: "'Barlow', sans-serif",
+                background: t.bg, border: `1px solid ${t.border}`,
+                borderRadius: '8px', padding: '6px 10px',
+                color: t.text, outline: 'none',
+                transition: 'border-color 0.15s'
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+              onBlur={e => e.target.style.borderColor = t.border}
+            />
+          </div>
+        ) : (
+          profile?.location && (
+            <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              {profile.location}
+            </p>
+          )
         )}
-        {profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6' }}>{profile.bio}</p>}
+
+        {/* Bio */}
+        {editing ? (
+          <textarea
+            value={editData.bio}
+            onChange={e => setEditData({ ...editData, bio: e.target.value })}
+            placeholder="Erzähl was über dich..."
+            rows={3}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              fontSize: '14px', lineHeight: '1.6',
+              fontFamily: "'Barlow', sans-serif",
+              background: t.bg, border: `1px solid ${t.border}`,
+              borderRadius: '8px', padding: '8px 10px',
+              color: t.text, outline: 'none', resize: 'none',
+              transition: 'border-color 0.15s'
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+            onBlur={e => e.target.style.borderColor = t.border}
+          />
+        ) : (
+          profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6' }}>{profile.bio}</p>
+        )}
       </div>
 
       {/* Stats als Kacheln */}
@@ -522,61 +659,6 @@ const toggleFollow = async () => {
         )}
       </div>
 
-      {/* Edit Modal — centered */}
-      {editing && (
-        <div
-          onClick={() => { setEditing(false); setEditingImages(false) }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: 'var(--space-4)', backdropFilter: 'blur(4px)'
-          }}
-          className="animate-fadeIn">
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: t.surface, borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-6)', width: '100%', maxWidth: '420px',
-              maxHeight: '85vh', overflowY: 'auto',
-              border: `1px solid ${t.border}`,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
-            }}
-            className="animate-scaleIn">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-              <h3 style={{ color: t.text, fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', fontFamily: "var(--font-family-condensed)", margin: 0 }}>
-                Profil bearbeiten
-              </h3>
-              <button onClick={() => { setEditing(false); setEditingImages(false) }} style={{
-                background: 'none', border: 'none', color: t.muted, cursor: 'pointer',
-                fontSize: '22px', padding: 0, lineHeight: 1
-              }}>×</button>
-            </div>
-
-            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Username</label>
-            <input value={editData.username} onChange={e => setEditData({...editData, username: e.target.value})}
-              placeholder="dein_username" style={inputStyle} />
-
-            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Standort</label>
-            <input value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})}
-              placeholder="z.B. München, Bayern" style={inputStyle} />
-
-            <label style={{ color: t.muted, fontSize: 'var(--font-size-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'var(--font-weight-semibold)' }}>Bio</label>
-            <textarea value={editData.bio} onChange={e => setEditData({...editData, bio: e.target.value})}
-              placeholder="Erzähl was über dich..." rows={3}
-              style={{ ...inputStyle, resize: 'none' }} />
-
-            <button onClick={saveProfile} style={{
-              width: '100%', background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
-              color: 'white', border: 'none',
-              borderRadius: 'var(--radius-md)', padding: 'var(--space-3)',
-              cursor: 'pointer', fontSize: 'var(--font-size-base)',
-              fontWeight: 'var(--font-weight-bold)', fontFamily: "var(--font-family-primary)",
-              boxShadow: '0 4px 15px rgba(255,107,53,0.25)',
-              transition: 'all var(--transition-fast)'
-            }}>Speichern</button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
