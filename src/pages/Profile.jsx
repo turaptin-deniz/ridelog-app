@@ -36,6 +36,8 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [bikes, setBikes] = useState([])
   const [routes, setRoutes] = useState([])
   const [earnedBadges, setEarnedBadges] = useState([])
+  const [userPosts, setUserPosts] = useState([])
+  const [selectedPost, setSelectedPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
@@ -56,10 +58,12 @@ export default function Profile({ darkMode, setDarkMode }) {
     const { data: bikeData } = await supabase.from('motorcycles').select('*').eq('user_id', user.id)
     const { data: routeData } = await supabase.from('routes').select('*, profiles(username, avatar_url)').eq('user_id', user.id).order('created_at', { ascending: false })
     const { data: badgeData } = await supabase.from('badges').select('*').eq('user_id', user.id)
+    const { data: postData } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
     setProfile(prof)
     setBikes(bikeData || [])
     setRoutes(routeData || [])
     setEarnedBadges(badgeData?.map(b => b.type) || [])
+    setUserPosts(postData || [])
     setEditData({ username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '' })
     setLoading(false)
   }
@@ -100,6 +104,17 @@ const toggleFollow = async () => {
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) checkFollow() }, [profile])
+
+  // Refresh posts when a new one is created via the Plus button
+  useEffect(() => {
+    const refresh = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      setUserPosts(data || [])
+    }
+    window.addEventListener('ridelog:post-created', refresh)
+    return () => window.removeEventListener('ridelog:post-created', refresh)
+  }, [])
 
   const saveProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -474,22 +489,54 @@ const toggleFollow = async () => {
 
         {/* Posts */}
         {activeTab === 'posts' && (
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-              {[1,2,3,4,5,6].map(i => (
-                <div key={i} style={{
-                  aspectRatio: '1', background: t.surface,
-                  border: `1px solid ${t.border}`,
-                  borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                </div>
-              ))}
-            </div>
+          <div>
+            {userPosts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+                <p style={{ color: t.muted, fontSize: '14px', marginBottom: '4px', fontFamily: "'Barlow', sans-serif" }}>Noch keine Posts</p>
+                <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>Teile deine erste Tour über den Plus-Button!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
+                {userPosts.map(post => {
+                  const firstPhoto = post.photos?.[0]
+                  const isVid = firstPhoto && /\.(mp4|mov|webm)/i.test(firstPhoto)
+                  const isMulti = (post.photos?.length || 0) > 1
+                  return (
+                    <div key={post.id} onClick={() => setSelectedPost(post)} style={{ aspectRatio: '1', overflow: 'hidden', cursor: 'pointer', background: t.surface, position: 'relative' }}>
+                      {firstPhoto ? (
+                        isVid
+                          ? <video src={firstPhoto} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          : <img src={firstPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', boxSizing: 'border-box', background: t.surface }}>
+                          <p style={{ fontSize: '10px', color: t.text, lineHeight: 1.4, textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
+                            {post.content}
+                          </p>
+                        </div>
+                      )}
+                      {/* Multi-slide indicator */}
+                      {isMulti && (
+                        <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))' }}>
+                            <rect x="8" y="2" width="13" height="13" rx="2"/><path d="M3 8H2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/>
+                          </svg>
+                        </div>
+                      )}
+                      {/* Video indicator */}
+                      {isVid && !isMulti && (
+                        <div style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '2px 4px', display: 'flex' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -695,16 +742,111 @@ const toggleFollow = async () => {
         )}
       </div>
 
-      {/* Route / Meetup detail modal */}
-      {selectedRoute && (
-        <RouteDetail
-          row={selectedRoute}
-          currentUser={currentUser}
-          t={t}
-          onClose={() => setSelectedRoute(null)}
-        />
+      {/* Post detail carousel modal */}
+      {selectedPost && (
+        <PostDetailModal post={selectedPost} profile={profile} t={t} onClose={() => setSelectedPost(null)} />
       )}
 
+      {/* Route / Meetup detail modal */}
+      {selectedRoute && (
+        <RouteDetail row={selectedRoute} currentUser={currentUser} t={t} onClose={() => setSelectedRoute(null)} />
+      )}
+
+    </div>
+  )
+}
+
+// ── Post Detail Modal ────────────────────────────────────────────────────────
+function PostDetailModal({ post, profile, t, onClose }) {
+  const [slideIdx, setSlideIdx] = useState(0)
+  const photos = post.photos || []
+  const isVid = url => url && /\.(mp4|mov|webm)/i.test(url)
+
+  const formatDate = (str) => new Date(str).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '16px', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} className="animate-scaleIn">
+
+        {/* Header */}
+        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#3b82f6', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : profile?.username?.slice(0, 2).toUpperCase() || '??'}
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 700, fontSize: '14px', color: t.text, fontFamily: "'Barlow', sans-serif" }}>@{profile?.username}</p>
+            <p style={{ color: t.muted, fontSize: '11px', fontFamily: "'Barlow', sans-serif" }}>{formatDate(post.created_at)}</p>
+          </div>
+          {photos.length > 1 && (
+            <span style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', borderRadius: '20px', padding: '2px 10px', fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}>
+              {slideIdx + 1} / {photos.length}
+            </span>
+          )}
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1, marginLeft: '4px' }}>×</button>
+        </div>
+
+        {/* Carousel */}
+        {photos.length > 0 && (
+          <div style={{ position: 'relative', background: '#000', flexShrink: 0 }}>
+            {isVid(photos[slideIdx])
+              ? <video src={photos[slideIdx]} controls style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', display: 'block' }} />
+              : <img src={photos[slideIdx]} alt="" style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', display: 'block' }} />
+            }
+            {/* Arrows */}
+            {photos.length > 1 && slideIdx > 0 && (
+              <button onClick={() => setSlideIdx(i => i - 1)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            )}
+            {photos.length > 1 && slideIdx < photos.length - 1 && (
+              <button onClick={() => setSlideIdx(i => i + 1)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
+            {/* Dots */}
+            {photos.length > 1 && (
+              <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
+                {photos.map((_, i) => (
+                  <div key={i} onClick={() => setSlideIdx(i)} style={{ height: '6px', width: i === slideIdx ? '18px' : '6px', borderRadius: '3px', background: i === slideIdx ? 'white' : 'rgba(255,255,255,0.45)', transition: 'width 0.2s ease', cursor: 'pointer' }} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Slide strip (thumbnails) */}
+        {photos.length > 1 && (
+          <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', overflowX: 'auto', background: t.bg, flexShrink: 0 }}>
+            {photos.map((url, i) => (
+              <div key={i} onClick={() => setSlideIdx(i)} style={{ flexShrink: 0, width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: i === slideIdx ? '2px solid #3b82f6' : '2px solid transparent', boxSizing: 'border-box', transition: 'border 0.15s' }}>
+                {isVid(url)
+                  ? <video src={url} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                }
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Text-only post */}
+        {photos.length === 0 && (
+          <div style={{ padding: '32px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '120px' }}>
+            <p style={{ fontSize: '18px', lineHeight: 1.6, color: t.text, fontFamily: "'Barlow', sans-serif", textAlign: 'center' }}>{post.content}</p>
+          </div>
+        )}
+
+        {/* Caption */}
+        {post.content && photos.length > 0 && (
+          <div style={{ padding: '12px 16px', overflowY: 'auto' }}>
+            <p style={{ fontSize: '14px', lineHeight: 1.6, color: t.text, fontFamily: "'Barlow', sans-serif" }}>
+              <span style={{ fontWeight: 700, color: '#3b82f6', marginRight: '6px' }}>@{profile?.username}</span>
+              {post.content}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

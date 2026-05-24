@@ -2,6 +2,118 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import RouteDetail from '../components/RouteDetail'
 
+// ── helpers (module-level, no hooks) ────────────────────────────────────────
+const isVideoUrl = url => url && /\.(mp4|mov|webm)/i.test(url)
+
+function formatTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Gerade'
+  if (mins < 60) return `${mins}m`
+  if (mins < 1440) return `${Math.floor(mins / 60)}h`
+  return `${Math.floor(mins / 1440)}d`
+}
+
+// ── PostCard with carousel ───────────────────────────────────────────────────
+function PostCard({ post, t, onLike, onComment, onRepost }) {
+  const [slideIdx, setSlideIdx] = useState(0)
+  const photos = post.photos || []
+
+  return (
+    <div style={{ borderBottom: `1px solid ${t.border}` }} className="animate-fadeIn">
+
+      {/* Header */}
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0 }}>
+          {post.profiles?.avatar_url
+            ? <img src={post.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+            : post.profiles?.username?.slice(0, 2).toUpperCase() || '??'}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: '700', fontSize: '14px', color: t.text, fontFamily: "'Barlow', sans-serif" }}>@{post.profiles?.username}</p>
+          <p style={{ color: t.muted, fontSize: '11px' }}>{formatTime(post.created_at)}</p>
+        </div>
+        <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '18px' }}>···</button>
+      </div>
+
+      {/* Media carousel */}
+      {photos.length > 0 && (
+        <div style={{ position: 'relative', background: '#000', width: '100%' }}>
+          {isVideoUrl(photos[slideIdx])
+            ? <video src={photos[slideIdx]} controls style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }} />
+            : <img src={photos[slideIdx]} alt="" style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }} />
+          }
+
+          {/* Prev arrow */}
+          {photos.length > 1 && slideIdx > 0 && (
+            <button onClick={() => setSlideIdx(i => i - 1)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+          )}
+          {/* Next arrow */}
+          {photos.length > 1 && slideIdx < photos.length - 1 && (
+            <button onClick={() => setSlideIdx(i => i + 1)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          )}
+          {/* Dots + counter */}
+          {photos.length > 1 && (
+            <>
+              <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                {photos.map((_, i) => (
+                  <div key={i} onClick={() => setSlideIdx(i)} style={{ height: '6px', width: i === slideIdx ? '18px' : '6px', borderRadius: '3px', background: i === slideIdx ? 'white' : 'rgba(255,255,255,0.45)', transition: 'width 0.2s ease', cursor: 'pointer' }} />
+                ))}
+              </div>
+              <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, color: 'white', fontFamily: "'Barlow', sans-serif" }}>
+                {slideIdx + 1} / {photos.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Caption */}
+      {post.content && (
+        <div style={{ padding: '10px 16px 4px' }}>
+          <p style={{ fontSize: '14px', lineHeight: '1.5', color: t.text, fontFamily: "'Barlow', sans-serif" }}>
+            <span style={{ fontWeight: 700, marginRight: '6px' }}>@{post.profiles?.username}</span>
+            {post.content}
+          </p>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ padding: '8px 16px 14px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <button onClick={() => onLike(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: post.liked ? '#f43f5e' : t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked ? '#f43f5e' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          {post.like_count > 0 && post.like_count}
+        </button>
+        <button onClick={() => onComment(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          {post.comment_count > 0 && post.comment_count}
+        </button>
+        <button onClick={() => onRepost(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: post.reposted ? '#4ade80' : t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          {post.repost_count > 0 && post.repost_count}
+        </button>
+        <button className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.muted, padding: '8px 12px', borderRadius: '8px', marginLeft: 'auto' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Feed({ darkMode }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
@@ -263,15 +375,6 @@ export default function Feed({ darkMode }) {
     loadPosts(user.id)
   }
 
-  const formatTime = (dateStr) => {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 1) return 'Gerade'
-    if (mins < 60) return `${mins}m`
-    if (mins < 1440) return `${Math.floor(mins/60)}h`
-    return `${Math.floor(mins/1440)}d`
-  }
-
   const filteredPosts = activeTab === 'foryou' ? posts : posts.filter(p => p.profiles?.id !== currentUser?.id)
 
   // Comments Modal
@@ -415,102 +518,14 @@ export default function Feed({ darkMode }) {
           </div>
         ) : (
           filteredPosts.map(post => (
-            <div key={post.id} style={{ borderBottom: `1px solid ${t.border}` }} className="animate-fadeIn">
-
-              {/* Post Header */}
-              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0 }}>
-                  {post.profiles?.avatar_url
-                    ? <img src={post.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : post.profiles?.username?.slice(0,2).toUpperCase() || '??'}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: '700', fontSize: '14px', color: t.text, fontFamily: "'Barlow', sans-serif" }}>@{post.profiles?.username}</p>
-                  <p style={{ color: t.muted, fontSize: '11px' }}>{formatTime(post.created_at)}</p>
-                </div>
-                <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '18px' }}>···</button>
-              </div>
-
-              {/* Media */}
-              {post.photos && post.photos.length > 0 && (
-                <div style={{ width: '100%', maxHeight: '400px', overflow: 'hidden' }}>
-                  {post.photos[0].includes('.mp4') || post.photos[0].includes('.mov') ? (
-                    <video src={post.photos[0]} controls style={{ width: '100%', maxHeight: '400px', objectFit: 'cover' }} />
-                  ) : (
-                    <img src={post.photos[0]} alt="Post" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover' }} />
-                  )}
-                </div>
-              )}
-
-              {/* Content */}
-              {post.content && (
-                <div style={{ padding: '10px 16px' }}>
-                  <p style={{ fontSize: '14px', lineHeight: '1.5', color: t.text, fontFamily: "'Barlow', sans-serif" }}>{post.content}</p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={{ padding: '8px 16px 14px', display: 'flex', gap: '4px', alignItems: 'center' }}>
-
-                {/* Like */}
-                <button onClick={() => toggleLike(post)} className="btn-press" style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  color: post.liked ? '#f43f5e' : t.muted,
-                  fontSize: '13px', fontFamily: "'Barlow', sans-serif",
-                  fontWeight: '600', padding: '8px 12px', borderRadius: '8px',
-                  transition: 'all 0.15s'
-                }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked ? '#f43f5e' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                  </svg>
-                  {post.like_count > 0 && post.like_count}
-                </button>
-
-                {/* Comment */}
-                <button onClick={() => openComments(post)} className="btn-press" style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif",
-                  fontWeight: '600', padding: '8px 12px', borderRadius: '8px',
-                  transition: 'all 0.15s'
-                }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                  {post.comment_count > 0 && post.comment_count}
-                </button>
-
-                {/* Repost */}
-                <button onClick={() => toggleRepost(post)} className="btn-press" style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  color: post.reposted ? '#4ade80' : t.muted,
-                  fontSize: '13px', fontFamily: "'Barlow', sans-serif",
-                  fontWeight: '600', padding: '8px 12px', borderRadius: '8px',
-                  transition: 'all 0.15s'
-                }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                  </svg>
-                  {post.repost_count > 0 && post.repost_count}
-                </button>
-
-                {/* Share */}
-                <button className="btn-press" style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  color: t.muted, padding: '8px 12px', borderRadius: '8px',
-                  marginLeft: 'auto'
-                }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
+            <PostCard
+              key={post.id}
+              post={post}
+              t={t}
+              onLike={toggleLike}
+              onComment={openComments}
+              onRepost={toggleRepost}
+            />
           ))
         )}
         </>
