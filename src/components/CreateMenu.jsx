@@ -20,55 +20,18 @@ export default function CreateMenu({ open, onClose, onCreated }) {
 
   // Meetup state
   const [meetup, setMeetup] = useState({
-    title: '', date: '', time: '', location: '', lat: null, lng: null,
+    title: '', date: '', time: '',
     description: '', maxParticipants: ''
   })
   const [creatingMeetup, setCreatingMeetup] = useState(false)
 
-  // Address autocomplete
-  const [locationInput, setLocationInput] = useState('')
-  const [addressResults, setAddressResults] = useState([])
-  const [searchingAddress, setSearchingAddress] = useState(false)
-  const [addressFocused, setAddressFocused] = useState(false)
+  // Multi-stop list — first stop is the meetup point, rest are intermediate/destination
+  const newStop = () => ({ id: Math.random().toString(36).slice(2), input: '', address: '', lat: null, lng: null })
+  const [stops, setStops] = useState([newStop()])
 
-  // Debounced address search (Nominatim)
-  useEffect(() => {
-    if (!locationInput || locationInput.length < 3) {
-      setAddressResults([])
-      return
-    }
-    // Don't search if user already selected this exact string
-    if (locationInput === meetup.location && meetup.lat) return
-
-    const timer = setTimeout(async () => {
-      setSearchingAddress(true)
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationInput)}&limit=5&addressdetails=1`,
-          { headers: { 'Accept-Language': 'de' } }
-        )
-        const data = await res.json()
-        setAddressResults(data || [])
-      } catch (e) {
-        setAddressResults([])
-      } finally {
-        setSearchingAddress(false)
-      }
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [locationInput, meetup.location, meetup.lat])
-
-  const pickAddress = (result) => {
-    setMeetup({
-      ...meetup,
-      location: result.display_name,
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-    })
-    setLocationInput(result.display_name)
-    setAddressResults([])
-    setAddressFocused(false)
-  }
+  const updateStop = (id, patch) => setStops(stops.map(s => s.id === id ? { ...s, ...patch } : s))
+  const addStop = () => setStops([...stops, newStop()])
+  const removeStop = (id) => setStops(stops.filter(s => s.id !== id))
 
   // Reset when opened
   useEffect(() => {
@@ -84,9 +47,8 @@ export default function CreateMenu({ open, onClose, onCreated }) {
     setPostContent('')
     setPostFile(null)
     setPostPreview(null)
-    setMeetup({ title: '', date: '', time: '', location: '', lat: null, lng: null, description: '', maxParticipants: '' })
-    setLocationInput('')
-    setAddressResults([])
+    setMeetup({ title: '', date: '', time: '', description: '', maxParticipants: '' })
+    setStops([newStop()])
     setError('')
     setView('menu')
     onClose()
@@ -176,15 +138,23 @@ export default function CreateMenu({ open, onClose, onCreated }) {
     setError('')
     if (!meetup.title.trim()) { setError('Gib der Tour einen Titel.'); return }
     if (!meetup.date || !meetup.time) { setError('Wähle Datum und Uhrzeit.'); return }
-    if (!meetup.location.trim()) { setError('Treffpunkt fehlt.'); return }
-    if (!meetup.lat || !meetup.lng) { setError('Bitte wähle eine Adresse aus den Vorschlägen.'); return }
+
+    const validStops = stops.filter(s => s.address && s.lat && s.lng)
+    if (validStops.length === 0) {
+      setError('Wähle mindestens einen Treffpunkt aus den Adressvorschlägen.')
+      return
+    }
+    if (validStops.length < stops.length) {
+      setError('Manche Stopps haben keine gültige Adresse. Wähle aus den Vorschlägen oder entferne den Stopp.')
+      return
+    }
 
     setCreatingMeetup(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const meetupAt = new Date(`${meetup.date}T${meetup.time}`).toISOString()
+      const meetingPoint = validStops[0]
 
-      // Detect "table doesn't exist" robustly — PostgREST code PGRST205 or various message variants
       const isMissingTable = (err) => {
         if (!err) return false
         if (err.code === 'PGRST205' || err.code === '42P01') return true
@@ -192,24 +162,37 @@ export default function CreateMenu({ open, onClose, onCreated }) {
         return /does not exist|not find the table|schema cache|relation .* does not/i.test(m)
       }
 
-      // Try dedicated `meetups` table first
-      const payload = {
+      // Build waypoints array: first = meetup point (has meetup metadata), rest = stops
+      const waypointsJson = validStops.map((s, i) => ({
+        type: i === 0 ? 'meetup' : 'stop',
+        order: i,
+        address: s.address,
+        lat: s.lat,
+        lng: s.lng,
+        ...(i === 0 ? {
+          meetup_at: meetupAt,
+          description: meetup.description || null,
+          max_participants: meetup.maxParticipants ? parseInt(meetup.maxParticipants, 10) : null,
+        } : {})
+      }))
+
+      // Try dedicated meetups table first
+      const meetupPayload = {
         user_id: user.id,
         title: meetup.title,
         description: meetup.description || null,
         meetup_at: meetupAt,
-        location: meetup.location,
-        lat: meetup.lat,
-        lng: meetup.lng,
+        location: meetingPoint.address,
+        lat: meetingPoint.lat,
+        lng: meetingPoint.lng,
         max_participants: meetup.maxParticipants ? parseInt(meetup.maxParticipants, 10) : null,
+        waypoints: waypointsJson,
       }
 
-      let { error: insErr } = await supabase.from('meetups').insert(payload)
+      let { error: insErr } = await supabase.from('meetups').insert(meetupPayload)
 
       if (isMissingTable(insErr)) {
-        // Fallback: store in routes table — must satisfy routes check constraints
-        // (difficulty/surface have CHECK constraints; we use valid values and flag
-        // the row as a meetup via title prefix + meetup data in waypoints JSON)
+        // Fallback: routes table with valid check-constraint values
         const fallback = {
           user_id: user.id,
           title: `[MEETUP] ${meetup.title}`,
@@ -217,15 +200,7 @@ export default function CreateMenu({ open, onClose, onCreated }) {
           duration_minutes: 0,
           difficulty: 'easy',
           surface: 'asphalt',
-          waypoints: [{
-            type: 'meetup',
-            address: meetup.location,
-            lat: meetup.lat,
-            lng: meetup.lng,
-            meetup_at: meetupAt,
-            description: meetup.description,
-            max_participants: meetup.maxParticipants ? parseInt(meetup.maxParticipants, 10) : null,
-          }],
+          waypoints: waypointsJson,
         }
         const r = await supabase.from('routes').insert(fallback)
         if (r.error) throw r.error
@@ -445,92 +420,50 @@ export default function CreateMenu({ open, onClose, onCreated }) {
               </div>
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <label style={labelStyle}>Treffpunkt (Adresse)</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={locationInput}
-                  onChange={e => {
-                    setLocationInput(e.target.value)
-                    if (meetup.lat) setMeetup({ ...meetup, location: '', lat: null, lng: null })
-                  }}
-                  onFocus={() => { setAddressFocused(true); focusOn({ target: { style: {} } }) }}
-                  onBlur={(e) => {
-                    // Delay so click on result registers
-                    setTimeout(() => setAddressFocused(false), 200)
-                    focusOff(e)
-                  }}
-                  placeholder="z.B. Marienplatz, München"
-                  style={{ ...inputBase, paddingRight: '36px' }}
-                />
-                {/* Status icon */}
-                <div style={{
-                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                  display: 'flex', alignItems: 'center'
-                }}>
-                  {searchingAddress ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" className="animate-spin" style={{ color: 'var(--color-text-muted)' }}>
-                      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="40" strokeDashoffset="10"/>
-                    </svg>
-                  ) : meetup.lat ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                  )}
-                </div>
+            {/* Stops list — first is meetup point, rest are intermediate stops */}
+            <div>
+              <label style={labelStyle}>Route (Treffpunkt + Stopps)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                {stops.map((stop, index) => (
+                  <StopRow
+                    key={stop.id}
+                    stop={stop}
+                    index={index}
+                    canRemove={stops.length > 1}
+                    onChange={(patch) => updateStop(stop.id, patch)}
+                    onRemove={() => removeStop(stop.id)}
+                  />
+                ))}
               </div>
-
-              {/* Results dropdown */}
-              {addressFocused && addressResults.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0,
-                  marginTop: '4px', zIndex: 10,
-                  background: 'var(--color-surface)',
-                  border: '1px solid var(--color-border-base)',
-                  borderRadius: 'var(--radius-base)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                  overflow: 'hidden', maxHeight: '240px', overflowY: 'auto'
-                }}>
-                  {addressResults.map(r => (
-                    <button
-                      key={r.place_id}
-                      onMouseDown={(e) => { e.preventDefault(); pickAddress(r) }}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        background: 'transparent', border: 'none',
-                        padding: 'var(--space-3) var(--space-4)',
-                        color: 'var(--color-text-primary)',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family-primary)',
-                        fontSize: 'var(--font-size-sm)',
-                        lineHeight: 1.4,
-                        borderBottom: '1px solid var(--color-border-light)',
-                        transition: 'background var(--transition-fast)'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                        </svg>
-                        <span>{r.display_name}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!meetup.lat && locationInput.length >= 3 && !searchingAddress && addressResults.length === 0 && (
-                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-                  Keine Treffer — versuch's spezifischer.
-                </p>
-              )}
+              <button
+                onClick={addStop}
+                style={{
+                  marginTop: 'var(--space-3)',
+                  width: '100%', padding: 'var(--space-3)',
+                  background: 'transparent',
+                  border: '1px dashed var(--color-border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: 'var(--font-size-sm)', fontWeight: 600,
+                  fontFamily: 'var(--font-family-primary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  transition: 'all var(--transition-fast)'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
+                  e.currentTarget.style.color = 'var(--color-accent-primary)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                  e.currentTarget.style.color = 'var(--color-text-secondary)'
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Stopp hinzufügen
+              </button>
             </div>
 
             <div>
@@ -600,6 +533,188 @@ function OptionCard({ onClick, accent, title, desc, icon }) {
         }}>{desc}</p>
       </div>
     </button>
+  )
+}
+
+function StopRow({ stop, index, canRemove, onChange, onRemove }) {
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [focused, setFocused] = useState(false)
+
+  // Sync local input with stop.input
+  useEffect(() => {
+    if (!stop.input || stop.input.length < 3) {
+      setResults([])
+      return
+    }
+    // Don't search if user already picked this exact result
+    if (stop.input === stop.address && stop.lat) return
+
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(stop.input)}&limit=5&addressdetails=1`,
+          { headers: { 'Accept-Language': 'de' } }
+        )
+        const data = await res.json()
+        setResults(data || [])
+      } catch {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [stop.input, stop.address, stop.lat])
+
+  const pick = (r) => {
+    onChange({
+      input: r.display_name,
+      address: r.display_name,
+      lat: parseFloat(r.lat),
+      lng: parseFloat(r.lon),
+    })
+    setResults([])
+    setFocused(false)
+  }
+
+  const isMeetingPoint = index === 0
+  const label = isMeetingPoint ? 'A' : (index + 1).toString()
+  const placeholder = isMeetingPoint ? 'Treffpunkt-Adresse' : `Stopp ${index + 1}`
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+      {/* Order badge */}
+      <div style={{
+        flexShrink: 0,
+        width: '32px', height: '40px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 'var(--radius-base)',
+        background: isMeetingPoint
+          ? 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)'
+          : 'var(--color-surface-active)',
+        color: isMeetingPoint ? 'white' : 'var(--color-text-secondary)',
+        fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif",
+        fontSize: '15px'
+      }}>{label}</div>
+
+      <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            value={stop.input}
+            onChange={e => {
+              onChange({ input: e.target.value, ...(stop.lat ? { address: '', lat: null, lng: null } : {}) })
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 200)}
+            placeholder={placeholder}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: 'var(--color-bg-primary)',
+              border: '1px solid var(--color-border-base)',
+              borderRadius: 'var(--radius-base)',
+              padding: '10px 36px 10px 12px',
+              color: 'var(--color-text-primary)',
+              fontSize: 'var(--font-size-sm)',
+              fontFamily: 'var(--font-family-primary)',
+              outline: 'none',
+              transition: 'border-color var(--transition-fast)'
+            }}
+            onFocusCapture={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+            onBlurCapture={e => e.target.style.borderColor = 'var(--color-border-base)'}
+          />
+          {/* Status icon */}
+          <div style={{
+            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+            display: 'flex', alignItems: 'center', pointerEvents: 'none'
+          }}>
+            {searching ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" className="animate-spin" style={{ color: 'var(--color-text-muted)' }}>
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="40" strokeDashoffset="10"/>
+              </svg>
+            ) : stop.lat ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            )}
+          </div>
+        </div>
+
+        {focused && results.length > 0 && (
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 0,
+            marginTop: '4px', zIndex: 20,
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border-base)',
+            borderRadius: 'var(--radius-base)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            overflow: 'hidden', maxHeight: '220px', overflowY: 'auto'
+          }}>
+            {results.map(r => (
+              <button
+                key={r.place_id}
+                onMouseDown={(e) => { e.preventDefault(); pick(r) }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  background: 'transparent', border: 'none',
+                  padding: '10px 12px',
+                  color: 'var(--color-text-primary)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-family-primary)',
+                  fontSize: 'var(--font-size-sm)', lineHeight: 1.4,
+                  borderBottom: '1px solid var(--color-border-light)',
+                  transition: 'background var(--transition-fast)'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span>{r.display_name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {canRemove && (
+        <button
+          onClick={onRemove}
+          style={{
+            flexShrink: 0, width: '40px', height: '40px',
+            background: 'transparent',
+            border: '1px solid var(--color-border-base)',
+            borderRadius: 'var(--radius-base)',
+            color: 'var(--color-text-muted)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all var(--transition-fast)'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = 'var(--color-danger)'
+            e.currentTarget.style.color = 'var(--color-danger)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'var(--color-border-base)'
+            e.currentTarget.style.color = 'var(--color-text-muted)'
+          }}
+          title="Stopp entfernen"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      )}
+    </div>
   )
 }
 

@@ -1,5 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { supabase } from '../supabase'
+
+const numberedMarker = (n, accent = false) => L.divIcon({
+  className: '',
+  html: `<div style="
+    width:28px;height:28px;border-radius:50%;
+    background:${accent ? '#ff6b35' : '#ffffff'};
+    color:${accent ? '#ffffff' : '#111111'};
+    border:2px solid ${accent ? '#ffffff' : '#ff6b35'};
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-family:'Barlow Condensed',sans-serif;font-size:13px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  ">${n}</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+})
 
 export default function Feed({ darkMode }) {
   const t = darkMode ? {
@@ -20,6 +38,7 @@ export default function Feed({ darkMode }) {
   const [loadingMeetups, setLoadingMeetups] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
   const [locationError, setLocationError] = useState('')
+  const [selectedMeetup, setSelectedMeetup] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [activeComments, setActiveComments] = useState(null)
   const [comments, setComments] = useState([])
@@ -56,14 +75,17 @@ export default function Feed({ darkMode }) {
         .gte('meetup_at', new Date().toISOString())
       if (!error && data) {
         collected = collected.concat(data.map(m => ({
-          id: `m_${m.id}`,
+          id: m.id,
+          source: 'meetups',
           title: m.title,
           meetup_at: m.meetup_at,
           location: m.location,
           lat: m.lat, lng: m.lng,
           description: m.description,
           max_participants: m.max_participants,
+          stops: m.waypoints || [{ address: m.location, lat: m.lat, lng: m.lng }],
           profile: m.profiles,
+          owner_id: m.user_id,
         })))
       }
     } catch { /* table missing — fine */ }
@@ -75,16 +97,20 @@ export default function Feed({ darkMode }) {
       .like('title', '[MEETUP]%')
     if (routeRows) {
       collected = collected.concat(routeRows.map(r => {
-        const wp = (r.waypoints && r.waypoints[0]) || {}
+        const wps = r.waypoints || []
+        const meetupWp = wps.find(w => w.type === 'meetup') || wps[0] || {}
         return {
-          id: `r_${r.id}`,
+          id: r.id,
+          source: 'routes',
           title: r.title.replace(/^\[MEETUP\]\s*/, ''),
-          meetup_at: wp.meetup_at,
-          location: wp.address,
-          lat: wp.lat, lng: wp.lng,
-          description: wp.description,
-          max_participants: wp.max_participants,
+          meetup_at: meetupWp.meetup_at,
+          location: meetupWp.address,
+          lat: meetupWp.lat, lng: meetupWp.lng,
+          description: meetupWp.description,
+          max_participants: meetupWp.max_participants,
+          stops: wps,
           profile: r.profiles,
+          owner_id: r.user_id,
         }
       }).filter(m => m.meetup_at && new Date(m.meetup_at) >= new Date()))
     }
@@ -378,6 +404,17 @@ export default function Feed({ darkMode }) {
             userLocation={userLocation}
             locationError={locationError}
             onRetry={requestLocation}
+            onSelect={setSelectedMeetup}
+          />
+        )}
+
+        {/* Meetup detail modal */}
+        {selectedMeetup && (
+          <MeetupDetail
+            meetup={selectedMeetup}
+            currentUser={currentUser}
+            t={t}
+            onClose={() => setSelectedMeetup(null)}
           />
         )}
 
@@ -591,7 +628,7 @@ export default function Feed({ darkMode }) {
 // Nearby Meetups — sub-view for the "In der Nähe" tab
 // ============================================================
 
-function NearbyMeetups({ t, loading, meetups, userLocation, locationError, onRetry }) {
+function NearbyMeetups({ t, loading, meetups, userLocation, locationError, onRetry, onSelect }) {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
@@ -638,23 +675,35 @@ function NearbyMeetups({ t, loading, meetups, userLocation, locationError, onRet
           </p>
         </div>
       ) : (
-        meetups.map(m => <MeetupCard key={m.id} m={m} t={t} />)
+        meetups.map(m => <MeetupCard key={m.id} m={m} t={t} onClick={() => onSelect(m)} />)
       )}
     </div>
   )
 }
 
-function MeetupCard({ m, t }) {
+function MeetupCard({ m, t, onClick }) {
   const date = new Date(m.meetup_at)
   const dateStr = date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' })
   const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const stopCount = m.stops?.length || 1
 
   return (
-    <div style={{
-      background: t.surface, border: `1px solid ${t.border}`,
-      borderRadius: '12px', padding: '14px', marginBottom: '10px',
-      transition: 'border-color 0.15s'
-    }} className="animate-fadeIn">
+    <div
+      onClick={onClick}
+      style={{
+        background: t.surface, border: `1px solid ${t.border}`,
+        borderRadius: '12px', padding: '14px', marginBottom: '10px',
+        transition: 'all 0.15s', cursor: 'pointer'
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
+        e.currentTarget.style.transform = 'translateY(-1px)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = t.border
+        e.currentTarget.style.transform = 'translateY(0)'
+      }}
+      className="animate-fadeIn">
 
       {/* Header: title + distance */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
@@ -693,7 +742,17 @@ function MeetupCard({ m, t }) {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
         </svg>
-        <span>{m.location}</span>
+        <span style={{ flex: 1 }}>{m.location}</span>
+        {stopCount > 1 && (
+          <span style={{
+            flexShrink: 0,
+            background: 'rgba(0,217,255,0.12)',
+            border: '1px solid rgba(0,217,255,0.25)',
+            borderRadius: '50px', padding: '1px 7px',
+            fontSize: '10px', fontWeight: 700,
+            color: 'var(--color-accent-secondary)'
+          }}>+{stopCount - 1} Stopps</span>
+        )}
       </div>
 
       {/* Description */}
@@ -725,11 +784,315 @@ function MeetupCard({ m, t }) {
             </span>
           )}
         </div>
-        <button style={{
-          background: 'var(--color-accent-primary)', color: 'white', border: 'none',
-          borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
-          fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif"
-        }}>Teilnehmen</button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClick && onClick() }}
+          style={{
+            background: 'var(--color-accent-primary)', color: 'white', border: 'none',
+            borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
+            fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif"
+          }}>Details</button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// Meetup Detail Modal — map + stops + participants + join
+// ============================================================
+
+function MeetupDetail({ meetup, currentUser, t, onClose }) {
+  const [participants, setParticipants] = useState([])
+  const [isJoined, setIsJoined] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const [participantsLoaded, setParticipantsLoaded] = useState(false)
+  const [participantsAvailable, setParticipantsAvailable] = useState(true)
+
+  const stops = (meetup.stops || []).filter(s => typeof s.lat === 'number' && typeof s.lng === 'number')
+  const center = stops[0] ? [stops[0].lat, stops[0].lng] : [51.16, 10.45]
+  const polyline = stops.map(s => [s.lat, s.lng])
+
+  const date = new Date(meetup.meetup_at)
+  const dateStr = date.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+  const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+
+  const loadParticipants = async () => {
+    setParticipantsLoaded(false)
+    const meetupKey = `${meetup.source}:${meetup.id}`
+    const { data, error } = await supabase
+      .from('meetup_participants')
+      .select('user_id, profiles(id, username, avatar_url)')
+      .eq('meetup_key', meetupKey)
+
+    if (error) {
+      const m = (error.message || '') + ' ' + (error.details || '')
+      if (/does not exist|not find the table|schema cache/i.test(m) || error.code === 'PGRST205' || error.code === '42P01') {
+        setParticipantsAvailable(false)
+      }
+    } else if (data) {
+      setParticipants(data)
+      setIsJoined(data.some(p => p.user_id === currentUser?.id))
+    }
+    setParticipantsLoaded(true)
+  }
+
+  useEffect(() => { loadParticipants() }, [meetup.id])
+
+  const toggleJoin = async () => {
+    if (!currentUser || joining || !participantsAvailable) return
+    setJoining(true)
+    const meetupKey = `${meetup.source}:${meetup.id}`
+    if (isJoined) {
+      await supabase.from('meetup_participants').delete()
+        .eq('meetup_key', meetupKey).eq('user_id', currentUser.id)
+      setIsJoined(false)
+      setParticipants(participants.filter(p => p.user_id !== currentUser.id))
+    } else {
+      const { error } = await supabase.from('meetup_participants').insert({
+        meetup_key: meetupKey, user_id: currentUser.id
+      })
+      if (!error) {
+        setIsJoined(true)
+        loadParticipants()
+      }
+    }
+    setJoining(false)
+  }
+
+  const isOwner = currentUser?.id === meetup.owner_id
+  const atCapacity = meetup.max_participants && participants.length >= meetup.max_participants && !isJoined
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 2000, padding: 'var(--space-4)', backdropFilter: 'blur(4px)'
+      }}
+      className="animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: t.surface, borderRadius: 'var(--radius-lg)',
+          width: '100%', maxWidth: '460px',
+          maxHeight: '90vh', overflowY: 'auto',
+          border: `1px solid ${t.border}`,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+        }}
+        className="animate-scaleIn"
+      >
+        {/* Header */}
+        <div style={{
+          padding: 'var(--space-4)',
+          borderBottom: `1px solid ${t.border}`,
+          display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)'
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 'var(--font-size-xl)', fontWeight: 700,
+              color: t.text, margin: 0, marginBottom: '4px', lineHeight: 1.2
+            }}>{meetup.title}</h3>
+            <p style={{ color: t.muted, fontSize: '12px', margin: 0, fontFamily: "'Barlow', sans-serif" }}>
+              von @{meetup.profile?.username || 'jemand'}
+            </p>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'transparent', border: 'none', color: t.muted,
+            cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1
+          }}>×</button>
+        </div>
+
+        {/* Map */}
+        {stops.length > 0 && (
+          <div style={{ height: '220px', width: '100%', position: 'relative' }}>
+            <MapContainer
+              center={center}
+              zoom={stops.length > 1 ? 9 : 13}
+              scrollWheelZoom={false}
+              style={{ width: '100%', height: '100%', borderRadius: 0 }}
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {polyline.length > 1 && (
+                <Polyline positions={polyline} color="#ff6b35" weight={4} opacity={0.85} />
+              )}
+              {stops.map((s, i) => (
+                <Marker key={i} position={[s.lat, s.lng]} icon={numberedMarker(i === 0 ? 'A' : (i + 1), i === 0)} />
+              ))}
+            </MapContainer>
+          </div>
+        )}
+
+        {/* Body */}
+        <div style={{ padding: 'var(--space-4)' }}>
+
+          {/* Date + time */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: 'var(--space-3)', marginBottom: 'var(--space-3)',
+            background: t.bg, borderRadius: 'var(--radius-md)',
+            border: `1px solid ${t.border}`
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <div>
+              <p style={{ color: t.text, fontSize: '13px', fontWeight: 700, margin: 0, fontFamily: "'Barlow', sans-serif" }}>{dateStr}</p>
+              <p style={{ color: t.muted, fontSize: '12px', margin: 0, fontFamily: "'Barlow', sans-serif" }}>um {timeStr} Uhr</p>
+            </div>
+          </div>
+
+          {/* Stops list */}
+          <p style={{
+            color: t.muted, fontSize: '11px', textTransform: 'uppercase',
+            letterSpacing: '0.06em', fontWeight: 600, marginBottom: '8px',
+            fontFamily: "'Barlow', sans-serif"
+          }}>Route ({stops.length} {stops.length === 1 ? 'Punkt' : 'Punkte'})</p>
+          <div style={{
+            background: t.bg, border: `1px solid ${t.border}`,
+            borderRadius: 'var(--radius-md)', overflow: 'hidden',
+            marginBottom: 'var(--space-3)'
+          }}>
+            {(meetup.stops || []).map((s, i) => (
+              <div key={i} style={{
+                display: 'flex', gap: '10px', padding: '10px 12px',
+                alignItems: 'flex-start',
+                borderBottom: i < (meetup.stops || []).length - 1 ? `1px solid ${t.border}` : 'none'
+              }}>
+                <div style={{
+                  flexShrink: 0,
+                  width: '24px', height: '24px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%',
+                  background: i === 0 ? 'var(--color-accent-primary)' : t.border,
+                  color: i === 0 ? 'white' : t.muted,
+                  fontSize: '11px', fontWeight: 700,
+                  fontFamily: "'Barlow Condensed', sans-serif"
+                }}>{i === 0 ? 'A' : i + 1}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    color: t.text, fontSize: '13px', margin: 0,
+                    fontFamily: "'Barlow', sans-serif", lineHeight: 1.4
+                  }}>{s.address}</p>
+                  {i === 0 && (
+                    <p style={{
+                      color: 'var(--color-accent-primary)', fontSize: '10px', margin: '2px 0 0',
+                      fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                      fontFamily: "'Barlow', sans-serif"
+                    }}>Treffpunkt</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Description */}
+          {meetup.description && (
+            <>
+              <p style={{
+                color: t.muted, fontSize: '11px', textTransform: 'uppercase',
+                letterSpacing: '0.06em', fontWeight: 600, marginBottom: '6px',
+                fontFamily: "'Barlow', sans-serif"
+              }}>Beschreibung</p>
+              <p style={{
+                color: t.text, fontSize: '13px', lineHeight: 1.5,
+                fontFamily: "'Barlow', sans-serif", marginBottom: 'var(--space-3)'
+              }}>{meetup.description}</p>
+            </>
+          )}
+
+          {/* Participants */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <p style={{
+              color: t.muted, fontSize: '11px', textTransform: 'uppercase',
+              letterSpacing: '0.06em', fontWeight: 600, margin: 0,
+              fontFamily: "'Barlow', sans-serif"
+            }}>
+              Teilnehmer ({participants.length}{meetup.max_participants ? ` / ${meetup.max_participants}` : ''})
+            </p>
+          </div>
+
+          {!participantsAvailable ? (
+            <div style={{
+              padding: '10px 12px', background: 'rgba(245,158,11,0.1)',
+              border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-md)',
+              color: 'var(--color-warning)', fontSize: '12px',
+              fontFamily: "'Barlow', sans-serif", marginBottom: 'var(--space-3)', lineHeight: 1.4
+            }}>
+              Teilnehmer-Funktion braucht eine <code style={{ background: 'rgba(0,0,0,0.3)', padding: '1px 4px', borderRadius: '3px' }}>meetup_participants</code> Tabelle in Supabase.
+            </div>
+          ) : !participantsLoaded ? (
+            <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", marginBottom: 'var(--space-3)' }}>Laden…</p>
+          ) : participants.length === 0 ? (
+            <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", marginBottom: 'var(--space-3)' }}>
+              Noch keine Teilnehmer — sei der Erste!
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--space-3)' }}>
+              {participants.map(p => (
+                <div key={p.user_id} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: t.bg, border: `1px solid ${t.border}`,
+                  borderRadius: '50px', padding: '4px 10px 4px 4px'
+                }}>
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: 'var(--color-accent-primary)', overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontSize: '9px', fontWeight: 700
+                  }}>
+                    {p.profiles?.avatar_url
+                      ? <img src={p.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (p.profiles?.username?.slice(0,2).toUpperCase() || '??')}
+                  </div>
+                  <span style={{ color: t.text, fontSize: '12px', fontWeight: 600, fontFamily: "'Barlow', sans-serif" }}>
+                    @{p.profiles?.username || 'jemand'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Join button */}
+          {!isOwner && participantsAvailable && (
+            <button
+              onClick={toggleJoin}
+              disabled={joining || atCapacity}
+              style={{
+                width: '100%', padding: 'var(--space-3)',
+                background: isJoined
+                  ? 'transparent'
+                  : atCapacity
+                    ? 'var(--color-text-muted)'
+                    : 'linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)',
+                color: isJoined ? 'var(--color-danger)' : 'white',
+                border: isJoined ? '1px solid var(--color-danger)' : 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--font-size-base)', fontWeight: 700,
+                fontFamily: 'var(--font-family-primary)',
+                cursor: (joining || atCapacity) ? 'not-allowed' : 'pointer',
+                transition: 'all var(--transition-fast)',
+                boxShadow: isJoined ? 'none' : '0 4px 15px rgba(255,107,53,0.25)'
+              }}
+            >
+              {joining ? '…' : atCapacity ? 'Voll besetzt' : isJoined ? 'Abmelden' : 'Teilnehmen'}
+            </button>
+          )}
+          {isOwner && (
+            <div style={{
+              textAlign: 'center', padding: 'var(--space-3)',
+              background: 'rgba(255,107,53,0.1)',
+              border: '1px solid rgba(255,107,53,0.2)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-accent-primary)',
+              fontSize: '12px', fontWeight: 600, fontFamily: "'Barlow', sans-serif"
+            }}>
+              Du hast diese Tour organisiert
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
