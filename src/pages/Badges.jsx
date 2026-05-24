@@ -35,8 +35,6 @@ export default function Badges({ darkMode }) {
   const [earnedBadges, setEarnedBadges] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadData() }, [])
-
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -45,6 +43,8 @@ export default function Badges({ darkMode }) {
     setEarnedBadges(badges?.map(b => b.type) || [])
     setLoading(false)
   }
+
+  useEffect(() => { loadData() }, [])
 
   const getCurrentLeague = () => {
     const km = profile?.total_km || 0

@@ -5,6 +5,46 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import RoutePlanner from './RoutePlanner'
 
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
+
+const createRiderIcon = (color = '#6C63FF', isMe = false, avatarUrl = null, username = '') => {
+  const size = isMe ? 44 : 36
+  const content = avatarUrl
+    ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+    : `<span style="color:white;font-size:${isMe ? 14 : 11}px;font-weight:700;font-family:'Barlow',sans-serif;">${username?.slice(0,2).toUpperCase() || '??'}</span>`
+
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};border:3px solid white;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 12px rgba(0,0,0,0.5);
+      overflow:hidden;
+    ">${content}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
+  })
+}
+
+const getSpeedColor = (spd) => {
+  if (spd < 30) return '#4ade80'
+  if (spd < 60) return '#facc15'
+  if (spd < 100) return '#f97316'
+  return '#f43f5e'
+}
+
+function CenterMap({ position }) {
+  const map = useMap()
+  useEffect(() => { if (position) map.setView(position, map.getZoom()) }, [position])
+  return null
+}
+
 function LiveDisplay({ speed, distance }) {
   const [showKm, setShowKm] = useState(false)
 
@@ -29,39 +69,6 @@ function LiveDisplay({ speed, distance }) {
   )
 }
 
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const createRiderIcon = (color = '#6C63FF', isMe = false) => L.divIcon({
-  className: '',
-  html: `<div style="
-    width:${isMe ? 44 : 36}px;height:${isMe ? 44 : 36}px;border-radius:50%;
-    background:${color};border:3px solid white;
-    display:flex;align-items:center;justify-content:center;
-    font-size:${isMe ? 20 : 16}px;
-    box-shadow:0 2px 12px rgba(0,0,0,0.5);
-  ">🏍️</div>`,
-  iconSize: [isMe ? 44 : 36, isMe ? 44 : 36],
-  iconAnchor: [isMe ? 22 : 18, isMe ? 22 : 18],
-})
-
-const getSpeedColor = (spd) => {
-  if (spd < 30) return '#4ade80'
-  if (spd < 60) return '#facc15'
-  if (spd < 100) return '#f97316'
-  return '#f43f5e'
-}
-
-function CenterMap({ position }) {
-  const map = useMap()
-  useEffect(() => { if (position) map.setView(position, map.getZoom()) }, [position])
-  return null
-}
-
 export default function Map({ darkMode }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
@@ -71,6 +78,7 @@ export default function Map({ darkMode }) {
 
   const [isLive, setIsLive] = useState(false)
   const [myPosition, setMyPosition] = useState(null)
+  const [myProfile, setMyProfile] = useState(null)
   const [myTrail, setMyTrail] = useState([])
   const [speed, setSpeed] = useState(0)
   const [maxSpeed, setMaxSpeed] = useState(0)
@@ -92,8 +100,23 @@ export default function Map({ darkMode }) {
   const lastPosRef = useRef(null)
   const speedsRef = useRef([])
 
+  const loadMyProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+    if (data) setMyProfile(data)
+  }
+
+  const loadLiveRiders = async () => {
+    const { data } = await supabase
+      .from('live_sessions')
+      .select('*, profiles(username, avatar_url)')
+      .eq('is_active', true)
+    if (data) setLiveRiders(data)
+  }
+
   useEffect(() => {
     loadLiveRiders()
+    loadMyProfile()
     const channel = supabase.channel('live-riders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions' }, loadLiveRiders)
       .subscribe()
@@ -108,14 +131,6 @@ export default function Map({ darkMode }) {
     }
     return () => clearInterval(intervalRef.current)
   }, [isLive])
-
-  const loadLiveRiders = async () => {
-    const { data } = await supabase
-      .from('live_sessions')
-      .select('*, profiles(username, avatar_url)')
-      .eq('is_active', true)
-    if (data) setLiveRiders(data)
-  }
 
   const calcDistance = (lat1, lng1, lat2, lng2) => {
     const R = 6371
@@ -202,44 +217,7 @@ export default function Map({ darkMode }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
-      {/* Route Planner */}
       {showPlanner && <RoutePlanner darkMode={darkMode} onClose={() => setShowPlanner(false)} />}
-
-{/* Live Stats Bar */}
-{isLive && (
-  <div style={{
-    position: 'absolute',
-    bottom: '80px',
-    left: '0', right: '0',
-    zIndex: 999,
-    background: 'rgba(10,10,10,0.95)',
-    backdropFilter: 'blur(12px)',
-    borderTop: '1px solid #1f1f1f',
-    padding: '16px'
-  }}>
-    {/* Big rotating display */}
-    <LiveDisplay speed={speed} distance={distance} />
-
-    {/* Stats Row */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginTop: '12px' }}>
-      {[
-        { label: 'MAX', value: maxSpeed, unit: 'km/h' },
-        { label: 'DURCHSCHN.', value: avgSpeed, unit: 'km/h' },
-        { label: 'STRECKE', value: distance.toFixed(1), unit: 'km' },
-        { label: 'ZEIT', value: formatTime(rideTime), unit: '' },
-      ].map(stat => (
-        <div key={stat.label} style={{
-          background: '#1a1a1a', borderRadius: '8px', padding: '10px 6px',
-          textAlign: 'center', border: '1px solid #2a2a2a'
-        }}>
-          <p style={{ color: '#555', fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '4px' }}>{stat.label}</p>
-          <p style={{ color: 'white', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
-          {stat.unit && <p style={{ color: '#6C63FF', fontSize: '9px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginTop: '2px' }}>{stat.unit}</p>}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
 
       {/* Map */}
       <div style={{ flex: 1, position: 'relative' }}>
@@ -248,7 +226,7 @@ export default function Map({ darkMode }) {
           {centerOn && followMe && <CenterMap position={centerOn} />}
 
           {myPosition && (
-            <Marker position={myPosition} icon={createRiderIcon('#6C63FF', true)}>
+            <Marker position={myPosition} icon={createRiderIcon('#6C63FF', true, myProfile?.avatar_url, myProfile?.username)}>
               <Popup>
                 <div style={{ fontFamily: "'Barlow', sans-serif" }}>
                   <p style={{ fontWeight: '700' }}>Du</p>
@@ -273,7 +251,11 @@ export default function Map({ darkMode }) {
           })}
 
           {liveRiders.map(rider => (
-            <Marker key={rider.id} position={[48.14, 11.58]} icon={createRiderIcon('#f97316')}>
+            <Marker
+              key={rider.id}
+              position={[48.14, 11.58]}
+              icon={createRiderIcon('#f97316', false, rider.profiles?.avatar_url, rider.profiles?.username)}
+            >
               <Popup>{rider.profiles?.username || 'Fahrer'} 🏍️</Popup>
             </Marker>
           ))}
@@ -310,72 +292,102 @@ export default function Map({ darkMode }) {
 
         {/* Live Mode Controls */}
         {activeMode === 'live' && (
-  <>
-    <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-      {!isLive ? (
-        <button onClick={startRide} className="btn-press" style={{
-          background: '#6C63FF', color: 'white', border: 'none',
-          borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
-          fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
-          boxShadow: '0 4px 24px rgba(108,99,255,0.7)', letterSpacing: '0.5px'
-        }}>🏍️ RIDE STARTEN</button>
-      ) : (
-        <button onClick={stopRide} className="btn-press" style={{
-          background: '#f43f5e', color: 'white', border: 'none',
-          borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
-          fontSize: '16px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif",
-          boxShadow: '0 4px 24px rgba(244,63,94,0.7)', letterSpacing: '1px',
-          display: 'flex', alignItems: 'center', gap: '8px'
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-            <rect x="6" y="6" width="12" height="12" rx="2"/>
-          </svg>
-          RIDE BEENDEN
-        </button>
-      )}
-    </div>
-
-    {isLive && (
-      <>
-        <button onClick={() => setFollowMe(!followMe)} style={{
-          position: 'absolute', bottom: '290px', right: '12px', zIndex: 1000,
-          background: followMe ? '#6C63FF' : 'rgba(0,0,0,0.7)',
-          color: 'white', border: 'none', borderRadius: '8px',
-          padding: '10px 12px', cursor: 'pointer', fontSize: '12px',
-          fontFamily: "'Barlow', sans-serif", fontWeight: '600'
-        }}>{followMe ? '📍' : '🗺️'}</button>
-
-        <div style={{
-          position: 'absolute', bottom: '290px', left: '12px', zIndex: 1000,
-          background: 'rgba(0,0,0,0.75)', borderRadius: '8px', padding: '8px 10px',
-          backdropFilter: 'blur(4px)'
-        }}>
-          {[
-            { color: '#4ade80', label: '< 30' },
-            { color: '#facc15', label: '30–60' },
-            { color: '#f97316', label: '60–100' },
-            { color: '#f43f5e', label: '> 100' },
-          ].map(s => (
-            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-              <div style={{ width: '14px', height: '4px', background: s.color, borderRadius: '2px' }} />
-              <p style={{ color: 'white', fontSize: '10px', fontFamily: "'Barlow', sans-serif" }}>{s.label}</p>
+          <>
+            <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+              {!isLive ? (
+                <button onClick={startRide} className="btn-press" style={{
+                  background: '#6C63FF', color: 'white', border: 'none',
+                  borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
+                  fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
+                  boxShadow: '0 4px 24px rgba(108,99,255,0.7)', letterSpacing: '0.5px'
+                }}>🏍️ RIDE STARTEN</button>
+              ) : (
+                <button onClick={stopRide} className="btn-press" style={{
+                  background: '#f43f5e', color: 'white', border: 'none',
+                  borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
+                  fontSize: '16px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif",
+                  boxShadow: '0 4px 24px rgba(244,63,94,0.7)', letterSpacing: '1px',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                  </svg>
+                  RIDE BEENDEN
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-      </>
-    )}
-  </>
-)}
+
+            {isLive && (
+              <>
+                <button onClick={() => setFollowMe(!followMe)} style={{
+                  position: 'absolute', bottom: '290px', right: '12px', zIndex: 1000,
+                  background: followMe ? '#6C63FF' : 'rgba(0,0,0,0.7)',
+                  color: 'white', border: 'none', borderRadius: '8px',
+                  padding: '10px 12px', cursor: 'pointer', fontSize: '12px',
+                  fontFamily: "'Barlow', sans-serif", fontWeight: '600'
+                }}>{followMe ? '📍' : '🗺️'}</button>
+
+                <div style={{
+                  position: 'absolute', bottom: '290px', left: '12px', zIndex: 1000,
+                  background: 'rgba(0,0,0,0.75)', borderRadius: '8px', padding: '8px 10px',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  {[
+                    { color: '#4ade80', label: '< 30' },
+                    { color: '#facc15', label: '30–60' },
+                    { color: '#f97316', label: '60–100' },
+                    { color: '#f43f5e', label: '> 100' },
+                  ].map(s => (
+                    <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                      <div style={{ width: '14px', height: '4px', background: s.color, borderRadius: '2px' }} />
+                      <p style={{ color: 'white', fontSize: '10px', fontFamily: "'Barlow', sans-serif" }}>{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+
         {/* Live Riders Button */}
         {liveRiders.length > 0 && (
           <button onClick={() => setShowRiders(!showRiders)} style={{
-            position: 'absolute', top: isLive ? '110px' : '56px', right: '10px', zIndex: 1000,
+            position: 'absolute', top: '56px', right: '10px', zIndex: 1000,
             background: 'rgba(0,0,0,0.75)', color: 'white', border: 'none',
             borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
             fontFamily: "'Barlow', sans-serif", fontWeight: '600', backdropFilter: 'blur(4px)'
           }}>🔴 {liveRiders.length} Live</button>
         )}
       </div>
+
+      {/* Live Stats Bar */}
+      {isLive && (
+        <div style={{
+          background: 'rgba(10,10,10,0.95)',
+          backdropFilter: 'blur(12px)',
+          borderTop: '1px solid #1f1f1f',
+          padding: '16px', flexShrink: 0
+        }}>
+          <LiveDisplay speed={speed} distance={distance} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginTop: '12px' }}>
+            {[
+              { label: 'MAX', value: maxSpeed, unit: 'km/h' },
+              { label: 'DURCHSCHN.', value: avgSpeed, unit: 'km/h' },
+              { label: 'STRECKE', value: distance.toFixed(1), unit: 'km' },
+              { label: 'ZEIT', value: formatTime(rideTime), unit: '' },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                background: '#1a1a1a', borderRadius: '8px', padding: '10px 6px',
+                textAlign: 'center', border: '1px solid #2a2a2a'
+              }}>
+                <p style={{ color: '#555', fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '4px' }}>{stat.label}</p>
+                <p style={{ color: 'white', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
+                {stat.unit && <p style={{ color: '#6C63FF', fontSize: '9px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginTop: '2px' }}>{stat.unit}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Live Riders Panel */}
       {showRiders && liveRiders.length > 0 && (
@@ -388,11 +400,14 @@ export default function Map({ darkMode }) {
                 border: `1px solid ${t.border}`
               }}>
                 <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%', background: '#f97316',
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: '#f97316', overflow: 'hidden',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '13px', color: 'white', fontWeight: '700'
                 }}>
-                  {rider.profiles?.username?.slice(0,2).toUpperCase() || '??'}
+                  {rider.profiles?.avatar_url
+                    ? <img src={rider.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : rider.profiles?.username?.slice(0,2).toUpperCase() || '??'}
                 </div>
                 <div>
                   <p style={{ color: t.text, fontSize: '13px', fontWeight: '600', fontFamily: "'Barlow', sans-serif" }}>

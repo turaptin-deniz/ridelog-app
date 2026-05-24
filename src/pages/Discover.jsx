@@ -16,14 +16,14 @@ export default function Discover({ darkMode }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [followStates, setFollowStates] = useState({})
 
-  useEffect(() => { init() }, [])
-
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUser(user)
     loadUsers(user.id)
     loadRoutes()
   }
+
+  useEffect(() => { init() }, [])
 
   const loadUsers = async (userId) => {
     const { data } = await supabase.from('profiles')

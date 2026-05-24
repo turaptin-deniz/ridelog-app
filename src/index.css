@@ -1,70 +1,206 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Barlow', sans-serif;
-  -webkit-font-smoothing: antialiased;
+import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
+import Login from './pages/Login'
+import Map from './pages/Map'
+import Feed from './pages/Feed'
+import Profile from './pages/Profile'
+import Messages from './pages/Messages'
+import Discover from './pages/Discover'
+
+const NAV_ITEMS = [
+  { id: 'map', label: 'Karte', icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+      <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+    </svg>
+  )},
+  { id: 'feed', label: 'Feed', icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+    </svg>
+  )},
+  { id: 'discover', label: 'Entdecken', icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  )},
+  { id: 'messages', label: 'Chats', icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  )},
+  { id: 'profil', label: 'Profil', icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  )},
+]
+
+function App() {
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [darkMode, setDarkMode] = useState(true)
+  const [activePage, setActivePage] = useState('map')
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setLoading(false)
+    })
+    supabase.auth.onAuthStateChange((_event, session) => setSession(session))
+  }, [])
+
+  const dark = {
+    bg: '#080808',
+    bg2: '#0f0f0f',
+    surface: '#141414',
+    surface2: '#1a1a1a',
+    border: '#1f1f1f',
+    border2: '#2a2a2a',
+    text: '#f0f0f0',
+    text2: '#888',
+    text3: '#444',
+    accent: '#00F5A0',
+    accent2: '#00D9F5',
+    danger: '#FF3D57',
+  }
+
+  const light = {
+    bg: '#f8f8f6',
+    bg2: '#f0f0ee',
+    surface: '#ffffff',
+    surface2: '#f5f5f3',
+    border: '#e8e8e5',
+    border2: '#d8d8d5',
+    text: '#111111',
+    text2: '#666',
+    text3: '#aaa',
+    accent: '#00C47E',
+    accent2: '#00A8C5',
+    danger: '#FF3D57',
+  }
+
+  const t = darkMode ? dark : light
+
+  if (loading) return (
+    <div style={{ background: '#080808', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '2px solid #1f1f1f', borderTop: '2px solid #00F5A0', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
+  )
+
+  if (!session) return <Login onLogin={() => {}} darkMode={darkMode} setDarkMode={setDarkMode} t={t} />
+
+  const renderPage = () => {
+    switch(activePage) {
+      case 'map': return <Map darkMode={darkMode} t={t} />
+      case 'feed': return <Feed darkMode={darkMode} t={t} />
+      case 'discover': return <Discover darkMode={darkMode} t={t} />
+      case 'messages': return <Messages darkMode={darkMode} t={t} />
+      case 'profil': return <Profile darkMode={darkMode} setDarkMode={setDarkMode} t={t} />
+      default: return <Map darkMode={darkMode} t={t} />
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', background: '#000', minHeight: '100vh' }}>
+      <div style={{
+        width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column',
+        minHeight: '100vh', background: t.bg, position: 'relative',
+        boxShadow: darkMode ? '0 0 80px rgba(0,245,160,0.05), 0 0 0 1px #1a1a1a' : '0 0 40px rgba(0,0,0,0.15)'
+      }}>
+
+        {/* Header */}
+        <div style={{
+          padding: '14px 20px', display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', background: t.bg,
+          borderBottom: `1px solid ${t.border}`, flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Logo */}
+            <div style={{
+              width: '32px', height: '32px', background: t.accent,
+              borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="5" cy="17" r="3" stroke={darkMode ? '#080808' : '#fff'} strokeWidth="2"/>
+                <circle cx="19" cy="17" r="3" stroke={darkMode ? '#080808' : '#fff'} strokeWidth="2"/>
+                <path d="M5 17L8 9L13 8L16 5H19L21 9L19 17" stroke={darkMode ? '#080808' : '#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 9L13 10.5" stroke={darkMode ? '#080808' : '#fff'} strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <span style={{
+              fontSize: '18px', fontWeight: '700', color: t.text,
+              fontFamily: 'var(--font)', letterSpacing: '-0.5px'
+            }}>
+              ride<span style={{ color: t.accent }}>log</span>
+            </span>
+          </div>
+
+          <button style={{
+            background: 'transparent', border: 'none',
+            color: t.text2, cursor: 'pointer', padding: '6px'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Page */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-fadeIn">
+          {renderPage()}
+        </div>
+
+        {/* Bottom Nav */}
+        <div style={{
+          display: 'flex', background: t.bg,
+          borderTop: `1px solid ${t.border}`,
+          flexShrink: 0, paddingBottom: '4px', position: 'relative'
+        }}>
+          {/* Active indicator */}
+          <div style={{
+            position: 'absolute', top: 0, height: '2px',
+            background: t.accent, borderRadius: '0 0 2px 2px',
+            transition: 'left 0.3s cubic-bezier(0.16,1,0.3,1), width 0.3s ease',
+            left: `${NAV_ITEMS.findIndex(n => n.id === activePage) * 20}%`,
+            width: '20%'
+          }} />
+
+          {NAV_ITEMS.map(item => {
+            const active = activePage === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActivePage(item.id)}
+                className="nav-btn"
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  padding: '10px 0 6px', background: 'transparent',
+                  border: 'none', cursor: 'pointer',
+                  color: active ? t.accent : t.text3,
+                  gap: '3px', transition: 'color 0.2s'
+                }}
+              >
+                {item.icon(active)}
+                <span style={{
+                  fontSize: '9px', fontWeight: active ? '600' : '400',
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                  color: active ? t.accent : t.text3
+                }}>
+                  {item.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
 }
 
-body {
-  background: #000;
-  overflow-x: hidden;
-}
-
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
-}
-
-input, select, textarea, button {
-  font-family: 'Barlow', sans-serif;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.animate-slideUp {
-  animation: slideUp 0.25s ease forwards;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease forwards;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.2s ease forwards;
-}
-
-.nav-btn {
-  transition: all 0.15s ease;
-}
-
-.nav-btn:active {
-  transform: scale(0.9);
-}
-
-.btn-press:active {
-  transform: scale(0.97);
-  opacity: 0.9;
-}
+export default App

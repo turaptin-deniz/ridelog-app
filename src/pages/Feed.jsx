@@ -24,14 +24,14 @@ export default function Feed({ darkMode }) {
   const fileRef = useRef()
   const commentsEndRef = useRef()
 
-  useEffect(() => { init() }, [])
-  useEffect(() => { if (commentsEndRef.current) commentsEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [comments])
-
   const init = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUser(user)
     loadPosts(user.id)
   }
+
+  useEffect(() => { init() }, [])
+  useEffect(() => { if (commentsEndRef.current) commentsEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [comments])
 
   const loadPosts = async (userId) => {
     const { data } = await supabase
