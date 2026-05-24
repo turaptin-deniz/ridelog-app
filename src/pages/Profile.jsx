@@ -343,13 +343,20 @@ const toggleFollow = async () => {
           {/* Liga Badge — only when not editing */}
           {!editing && (
             <div style={{
-              background: league.color + '22', border: `1px solid ${league.color}66`,
-              borderRadius: '50px', padding: '2px 8px',
-              display: 'flex', alignItems: 'center', gap: '4px'
+              background: `${league.color}1a`,
+              border: `1px solid ${league.color}55`,
+              borderRadius: '6px',
+              padding: '3px 10px',
+              display: 'flex', alignItems: 'center',
             }}>
-              <span style={{ fontSize: '12px' }}>{league.icon}</span>
-              <span style={{ color: league.color, fontSize: '10px', fontWeight: '700', fontFamily: "'Barlow', sans-serif" }}>
-                {league.label.toUpperCase()}
+              <span style={{
+                color: league.color,
+                fontSize: '11px',
+                fontWeight: '700',
+                fontFamily: "'Barlow', sans-serif",
+                letterSpacing: '0.04em'
+              }}>
+                {league.label}
               </span>
             </div>
           )}

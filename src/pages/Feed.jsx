@@ -534,19 +534,6 @@ export default function Feed({ darkMode }) {
         )}
       </div>
 
-      {/* Create Post Button */}
-      <button onClick={() => setShowCreate(true)} className="btn-press" style={{
-        position: 'absolute', bottom: '70px', right: 'calc(50% - 224px)',
-        background: '#3b82f6', border: 'none', borderRadius: '50%',
-        width: '52px', height: '52px', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 20px rgba(59,130,246,0.5)', zIndex: 100
-      }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
-
       {/* Create Post Modal */}
       {showCreate && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
