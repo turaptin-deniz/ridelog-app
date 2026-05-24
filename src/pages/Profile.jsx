@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
+import RouteDetail from '../components/RouteDetail'
 
 const LEAGUES = [
   { id: 'bronze', label: 'Bronze', icon: '🥉', color: '#cd7f32', min: 0, max: 500 },
@@ -38,6 +39,8 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
+  const [selectedRoute, setSelectedRoute] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
   const [editData, setEditData] = useState({ username: '', bio: '', location: '' })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
@@ -48,9 +51,10 @@ export default function Profile({ darkMode, setDarkMode }) {
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
+    setCurrentUser(user)
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     const { data: bikeData } = await supabase.from('motorcycles').select('*').eq('user_id', user.id)
-    const { data: routeData } = await supabase.from('routes').select('*').eq('user_id', user.id)
+    const { data: routeData } = await supabase.from('routes').select('*, profiles(username, avatar_url)').eq('user_id', user.id).order('created_at', { ascending: false })
     const { data: badgeData } = await supabase.from('badges').select('*').eq('user_id', user.id)
     setProfile(prof)
     setBikes(bikeData || [])
@@ -495,19 +499,53 @@ const toggleFollow = async () => {
             {routes.length === 0 ? (
               <p style={{ color: t.muted, fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>Noch keine Touren</p>
             ) : (
-              routes.map(route => (
-                <div key={route.id} style={{
-                  background: t.surface, border: `1px solid ${t.border}`,
-                  borderRadius: '10px', padding: '14px', marginBottom: '10px',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                }}>
-                  <div>
-                    <p style={{ fontSize: '15px', fontWeight: '600', marginBottom: '2px' }}>{route.title}</p>
-                    <p style={{ color: t.muted, fontSize: '12px' }}>{route.region || 'Keine Region'} · {route.difficulty}</p>
+              routes.map(route => {
+                const isMeetup = typeof route.title === 'string' && route.title.startsWith('[MEETUP]')
+                const displayTitle = isMeetup ? route.title.replace(/^\[MEETUP\]\s*/, '') : route.title
+                return (
+                  <div
+                    key={route.id}
+                    onClick={() => setSelectedRoute(route)}
+                    style={{
+                      background: t.surface, border: `1px solid ${t.border}`,
+                      borderRadius: '10px', padding: '14px', marginBottom: '10px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      cursor: 'pointer', transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = t.border
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <p style={{ fontSize: '15px', fontWeight: '600', margin: 0 }}>{displayTitle}</p>
+                        {isMeetup && (
+                          <span style={{
+                            background: 'rgba(59,130,246,0.15)',
+                            border: '1px solid rgba(59,130,246,0.3)',
+                            color: 'var(--color-accent-primary)',
+                            borderRadius: '4px', padding: '1px 6px',
+                            fontSize: '9px', fontWeight: 700, letterSpacing: '0.05em',
+                            textTransform: 'uppercase', fontFamily: "'Barlow', sans-serif"
+                          }}>Meetup</span>
+                        )}
+                      </div>
+                      <p style={{ color: t.muted, fontSize: '12px', margin: 0 }}>
+                        {route.region || (isMeetup ? `${(route.waypoints || []).length} ${(route.waypoints || []).length === 1 ? 'Punkt' : 'Punkte'}` : 'Keine Region')}
+                        {!isMeetup && route.difficulty ? ` · ${route.difficulty}` : ''}
+                      </p>
+                    </div>
+                    {!isMeetup && route.distance_km != null && (
+                      <p style={{ fontSize: '15px', fontWeight: '700', color: '#3b82f6', margin: 0, marginLeft: '12px' }}>{route.distance_km} km</p>
+                    )}
                   </div>
-                  <p style={{ fontSize: '15px', fontWeight: '700', color: '#3b82f6' }}>{route.distance_km} km</p>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         )}
@@ -656,6 +694,16 @@ const toggleFollow = async () => {
           </div>
         )}
       </div>
+
+      {/* Route / Meetup detail modal */}
+      {selectedRoute && (
+        <RouteDetail
+          row={selectedRoute}
+          currentUser={currentUser}
+          t={t}
+          onClose={() => setSelectedRoute(null)}
+        />
+      )}
 
     </div>
   )
