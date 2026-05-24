@@ -29,6 +29,11 @@ function App() {
     })
   }, [])
 
+  // Apply theme to <html> so all CSS variables switch globally
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
+  }, [darkMode])
+
   const t = {
     bg: 'var(--color-bg-primary)',
     surface: 'var(--color-surface)',

@@ -271,26 +271,6 @@ export default function Map({ darkMode, onSelectRider }) {
           ))}
         </MapContainer>
 
-        {/* Top Mode Toggle */}
-        <div style={{
-          position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 1000, display: 'flex', background: 'rgba(0,0,0,0.75)',
-          borderRadius: '50px', padding: '4px', gap: '2px', backdropFilter: 'blur(8px)'
-        }}>
-          {[
-            { id: 'map', label: '🗺️ Karte' },
-            { id: 'live', label: '🔴 Live' },
-          ].map(mode => (
-            <button key={mode.id} onClick={() => setActiveMode(mode.id)} style={{
-              background: activeMode === mode.id ? '#6C63FF' : 'transparent',
-              color: 'white', border: 'none', borderRadius: '50px',
-              padding: '6px 16px', cursor: 'pointer', fontSize: '12px',
-              fontWeight: '700', fontFamily: "'Barlow', sans-serif",
-              transition: 'all 0.2s'
-            }}>{mode.label}</button>
-          ))}
-        </div>
-
         {/* Route Planner Button — top right, no emoji */}
         <button onClick={() => setShowPlanner(true)} style={{
           position: 'absolute', top: '12px', right: '12px', zIndex: 1000,
@@ -301,62 +281,72 @@ export default function Map({ darkMode, onSelectRider }) {
           letterSpacing: '0.03em'
         }}>Planen</button>
 
-        {/* Live Mode Controls */}
-        {activeMode === 'live' && (
+        {/* Ride Controls — always visible at bottom */}
+        <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+          {!isLive ? (
+            <button onClick={startRide} style={{
+              background: `linear-gradient(135deg, var(--color-accent-primary) 0%, #ff5a1f 100%)`,
+              color: 'white', border: 'none',
+              borderRadius: '50px', padding: '14px 32px', cursor: 'pointer',
+              fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
+              boxShadow: '0 4px 24px rgba(255,107,53,0.6)', letterSpacing: '0.5px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+              transition: 'transform var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              RIDE STARTEN
+            </button>
+          ) : (
+            <button onClick={stopRide} style={{
+              background: '#f43f5e', color: 'white', border: 'none',
+              borderRadius: '50px', padding: '14px 32px', cursor: 'pointer',
+              fontSize: '16px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif",
+              boxShadow: '0 4px 24px rgba(244,63,94,0.7)', letterSpacing: '1px',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              transition: 'transform var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+              RIDE BEENDEN
+            </button>
+          )}
+        </div>
+
+        {/* Live-only helper buttons */}
+        {isLive && (
           <>
-            <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-              {!isLive ? (
-                <button onClick={startRide} className="btn-press" style={{
-                  background: '#6C63FF', color: 'white', border: 'none',
-                  borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
-                  fontSize: '15px', fontWeight: '700', fontFamily: "'Barlow', sans-serif",
-                  boxShadow: '0 4px 24px rgba(108,99,255,0.7)', letterSpacing: '0.5px'
-                }}>🏍️ RIDE STARTEN</button>
-              ) : (
-                <button onClick={stopRide} className="btn-press" style={{
-                  background: '#f43f5e', color: 'white', border: 'none',
-                  borderRadius: '50px', padding: '14px 36px', cursor: 'pointer',
-                  fontSize: '16px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif",
-                  boxShadow: '0 4px 24px rgba(244,63,94,0.7)', letterSpacing: '1px',
-                  display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                    <rect x="6" y="6" width="12" height="12" rx="2"/>
-                  </svg>
-                  RIDE BEENDEN
-                </button>
-              )}
-            </div>
+            <button onClick={() => setFollowMe(!followMe)} style={{
+              position: 'absolute', bottom: '290px', right: '12px', zIndex: 1000,
+              background: followMe ? 'var(--color-accent-primary)' : 'rgba(0,0,0,0.7)',
+              color: 'white', border: 'none', borderRadius: '8px',
+              padding: '10px 12px', cursor: 'pointer', fontSize: '12px',
+              fontFamily: "'Barlow', sans-serif", fontWeight: '600'
+            }}>{followMe ? '📍' : '🗺️'}</button>
 
-            {isLive && (
-              <>
-                <button onClick={() => setFollowMe(!followMe)} style={{
-                  position: 'absolute', bottom: '290px', right: '12px', zIndex: 1000,
-                  background: followMe ? '#6C63FF' : 'rgba(0,0,0,0.7)',
-                  color: 'white', border: 'none', borderRadius: '8px',
-                  padding: '10px 12px', cursor: 'pointer', fontSize: '12px',
-                  fontFamily: "'Barlow', sans-serif", fontWeight: '600'
-                }}>{followMe ? '📍' : '🗺️'}</button>
-
-                <div style={{
-                  position: 'absolute', bottom: '290px', left: '12px', zIndex: 1000,
-                  background: 'rgba(0,0,0,0.75)', borderRadius: '8px', padding: '8px 10px',
-                  backdropFilter: 'blur(4px)'
-                }}>
-                  {[
-                    { color: '#4ade80', label: '< 30' },
-                    { color: '#facc15', label: '30–60' },
-                    { color: '#f97316', label: '60–100' },
-                    { color: '#f43f5e', label: '> 100' },
-                  ].map(s => (
-                    <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                      <div style={{ width: '14px', height: '4px', background: s.color, borderRadius: '2px' }} />
-                      <p style={{ color: 'white', fontSize: '10px', fontFamily: "'Barlow', sans-serif" }}>{s.label}</p>
-                    </div>
-                  ))}
+            <div style={{
+              position: 'absolute', bottom: '290px', left: '12px', zIndex: 1000,
+              background: 'rgba(0,0,0,0.75)', borderRadius: '8px', padding: '8px 10px',
+              backdropFilter: 'blur(4px)'
+            }}>
+              {[
+                { color: '#4ade80', label: '< 30' },
+                { color: '#facc15', label: '30–60' },
+                { color: '#f97316', label: '60–100' },
+                { color: '#f43f5e', label: '> 100' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                  <div style={{ width: '14px', height: '4px', background: s.color, borderRadius: '2px' }} />
+                  <p style={{ color: 'white', fontSize: '10px', fontFamily: "'Barlow', sans-serif" }}>{s.label}</p>
                 </div>
-              </>
-            )}
+              ))}
+            </div>
           </>
         )}
 

@@ -118,30 +118,28 @@
   --z-tooltip: 1070;
 }
 
-/* ---- LIGHT MODE ---- */
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-bg-primary: #f8f7f6;
-    --color-bg-secondary: #f1eded;
-    --color-bg-tertiary: #e8e3dd;
+/* ---- LIGHT MODE — activated by [data-theme="light"] on <html> ---- */
+[data-theme="light"] {
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f4f4f5;
+  --color-bg-tertiary: #ececec;
 
-    --color-surface: #ffffff;
-    --color-surface-hover: #f5f2ee;
-    --color-surface-active: #e8e3dd;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8f8f8;
+  --color-surface-active: #ececec;
 
-    --color-border-light: #e8e3dd;
-    --color-border-base: #ddd7ce;
-    --color-border-strong: #cfc8bb;
+  --color-border-light: #ececec;
+  --color-border-base: #e0e0e0;
+  --color-border-strong: #c8c8c8;
 
-    --color-text-primary: #1a1a1a;
-    --color-text-secondary: #4a4a4a;
-    --color-text-tertiary: #707070;
-    --color-text-muted: #999999;
+  --color-text-primary: #111111;
+  --color-text-secondary: #555555;
+  --color-text-tertiary: #888888;
+  --color-text-muted: #aaaaaa;
 
-    --color-accent-primary: #ff6b35;
-    --color-accent-secondary: #0099cc;
-    --color-accent-tertiary: #5558e3;
-  }
+  --color-accent-primary: #ff6b35;
+  --color-accent-secondary: #0099cc;
+  --color-accent-tertiary: #5558e3;
 }
 
 /* ====================================================================
