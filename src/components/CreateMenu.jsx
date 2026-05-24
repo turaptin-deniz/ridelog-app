@@ -207,15 +207,18 @@ export default function CreateMenu({ open, onClose, onCreated }) {
       let { error: insErr } = await supabase.from('meetups').insert(payload)
 
       if (isMissingTable(insErr)) {
-        // Fallback: store in routes table with meetup data nested in waypoints
+        // Fallback: store in routes table — must satisfy routes check constraints
+        // (difficulty/surface have CHECK constraints; we use valid values and flag
+        // the row as a meetup via title prefix + meetup data in waypoints JSON)
         const fallback = {
           user_id: user.id,
-          title: meetup.title,
+          title: `[MEETUP] ${meetup.title}`,
           distance_km: 0,
           duration_minutes: 0,
-          difficulty: 'meetup',
-          surface: 'meetup',
+          difficulty: 'easy',
+          surface: 'asphalt',
           waypoints: [{
+            type: 'meetup',
             address: meetup.location,
             lat: meetup.lat,
             lng: meetup.lng,

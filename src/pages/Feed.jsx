@@ -16,6 +16,10 @@ export default function Feed({ darkMode }) {
   const [preview, setPreview] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [activeTab, setActiveTab] = useState('foryou')
+  const [nearbyMeetups, setNearbyMeetups] = useState([])
+  const [loadingMeetups, setLoadingMeetups] = useState(false)
+  const [userLocation, setUserLocation] = useState(null)
+  const [locationError, setLocationError] = useState('')
   const [currentUser, setCurrentUser] = useState(null)
   const [activeComments, setActiveComments] = useState(null)
   const [comments, setComments] = useState([])
@@ -30,8 +34,106 @@ export default function Feed({ darkMode }) {
     loadPosts(user.id)
   }
 
+  // Haversine distance in km
+  const distanceKm = (lat1, lng1, lat2, lng2) => {
+    const R = 6371
+    const toRad = d => d * Math.PI / 180
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+    return 2 * R * Math.asin(Math.sqrt(a))
+  }
+
+  const loadMeetups = async (location) => {
+    setLoadingMeetups(true)
+    let collected = []
+
+    // 1) Dedicated meetups table — silently skip if not present
+    try {
+      const { data, error } = await supabase
+        .from('meetups')
+        .select('*, profiles(username, avatar_url)')
+        .gte('meetup_at', new Date().toISOString())
+      if (!error && data) {
+        collected = collected.concat(data.map(m => ({
+          id: `m_${m.id}`,
+          title: m.title,
+          meetup_at: m.meetup_at,
+          location: m.location,
+          lat: m.lat, lng: m.lng,
+          description: m.description,
+          max_participants: m.max_participants,
+          profile: m.profiles,
+        })))
+      }
+    } catch { /* table missing — fine */ }
+
+    // 2) Fallback rows in routes table — title prefixed "[MEETUP]"
+    const { data: routeRows } = await supabase
+      .from('routes')
+      .select('*, profiles(username, avatar_url)')
+      .like('title', '[MEETUP]%')
+    if (routeRows) {
+      collected = collected.concat(routeRows.map(r => {
+        const wp = (r.waypoints && r.waypoints[0]) || {}
+        return {
+          id: `r_${r.id}`,
+          title: r.title.replace(/^\[MEETUP\]\s*/, ''),
+          meetup_at: wp.meetup_at,
+          location: wp.address,
+          lat: wp.lat, lng: wp.lng,
+          description: wp.description,
+          max_participants: wp.max_participants,
+          profile: r.profiles,
+        }
+      }).filter(m => m.meetup_at && new Date(m.meetup_at) >= new Date()))
+    }
+
+    // Compute distance + sort
+    if (location && collected.length) {
+      collected = collected
+        .filter(m => typeof m.lat === 'number' && typeof m.lng === 'number')
+        .map(m => ({ ...m, distance: distanceKm(location.lat, location.lng, m.lat, m.lng) }))
+        .sort((a, b) => a.distance - b.distance)
+    } else {
+      collected.sort((a, b) => new Date(a.meetup_at) - new Date(b.meetup_at))
+    }
+
+    setNearbyMeetups(collected)
+    setLoadingMeetups(false)
+  }
+
+  const requestLocation = () => {
+    setLocationError('')
+    if (!navigator.geolocation) {
+      setLocationError('Geolokation nicht verfügbar.')
+      loadMeetups(null)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        setUserLocation(loc)
+        loadMeetups(loc)
+      },
+      () => {
+        setLocationError('Kein Standort — Touren nach Datum sortiert.')
+        loadMeetups(null)
+      },
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    )
+  }
+
   useEffect(() => { init() }, [])
   useEffect(() => { if (commentsEndRef.current) commentsEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [comments])
+
+  // Load meetups when nearby tab is opened
+  useEffect(() => {
+    if (activeTab === 'nearby' && nearbyMeetups.length === 0 && !loadingMeetups) {
+      if (userLocation) loadMeetups(userLocation)
+      else requestLocation()
+    }
+  }, [activeTab])
 
   const loadPosts = async (userId) => {
     const { data } = await supabase
@@ -248,19 +350,39 @@ export default function Feed({ darkMode }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, background: t.surface, flexShrink: 0 }}>
-        {[{ id: 'foryou', label: 'Für dich' }, { id: 'following', label: 'Folge ich' }].map(tab => (
+        {[
+          { id: 'foryou', label: 'Für dich' },
+          { id: 'following', label: 'Folge ich' },
+          { id: 'nearby', label: 'In der Nähe' },
+        ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            flex: 1, padding: '14px', background: 'transparent', border: 'none',
-            borderBottom: activeTab === tab.id ? '2px solid #6C63FF' : '2px solid transparent',
-            color: activeTab === tab.id ? '#6C63FF' : t.muted,
-            cursor: 'pointer', fontSize: '14px', fontWeight: '700',
-            fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s'
+            flex: 1, padding: '14px 8px', background: 'transparent', border: 'none',
+            borderBottom: activeTab === tab.id ? '2px solid var(--color-accent-primary)' : '2px solid transparent',
+            color: activeTab === tab.id ? 'var(--color-accent-primary)' : t.muted,
+            cursor: 'pointer', fontSize: '13px', fontWeight: '700',
+            fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s',
+            whiteSpace: 'nowrap'
           }}>{tab.label}</button>
         ))}
       </div>
 
-      {/* Posts */}
+      {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
+
+        {/* === NEARBY TAB === */}
+        {activeTab === 'nearby' && (
+          <NearbyMeetups
+            t={t}
+            loading={loadingMeetups}
+            meetups={nearbyMeetups}
+            userLocation={userLocation}
+            locationError={locationError}
+            onRetry={requestLocation}
+          />
+        )}
+
+        {activeTab !== 'nearby' && (
+        <>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
             <p style={{ color: '#6C63FF' }}>Laden...</p>
@@ -371,6 +493,8 @@ export default function Feed({ darkMode }) {
             </div>
           ))
         )}
+        </>
+        )}
       </div>
 
       {/* Create Post Button */}
@@ -459,6 +583,154 @@ export default function Feed({ darkMode }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ============================================================
+// Nearby Meetups — sub-view for the "In der Nähe" tab
+// ============================================================
+
+function NearbyMeetups({ t, loading, meetups, userLocation, locationError, onRetry }) {
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px' }}>
+        <p style={{ color: 'var(--color-accent-primary)', fontFamily: "'Barlow', sans-serif" }}>Suche Touren in deiner Nähe…</p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ padding: '12px 16px' }}>
+      {/* Location banner */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '10px 12px', marginBottom: '12px',
+        background: t.surface, border: `1px solid ${t.border}`,
+        borderRadius: '10px',
+        fontSize: '12px', color: t.muted, fontFamily: "'Barlow', sans-serif"
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={userLocation ? 'var(--color-accent-primary)' : t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span style={{ flex: 1 }}>
+          {userLocation
+            ? `Sortiert nach Distanz zu deinem Standort`
+            : (locationError || 'Standort nicht freigegeben')}
+        </span>
+        {!userLocation && (
+          <button onClick={onRetry} style={{
+            background: 'var(--color-accent-primary)', color: 'white', border: 'none',
+            borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
+            fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif"
+          }}>Standort</button>
+        )}
+      </div>
+
+      {meetups.length === 0 ? (
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          <p style={{ color: t.muted, fontSize: '14px', marginBottom: '4px', fontFamily: "'Barlow', sans-serif" }}>Noch keine Touren in der Nähe</p>
+          <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>
+            Plane selbst eine über den Plus-Button!
+          </p>
+        </div>
+      ) : (
+        meetups.map(m => <MeetupCard key={m.id} m={m} t={t} />)
+      )}
+    </div>
+  )
+}
+
+function MeetupCard({ m, t }) {
+  const date = new Date(m.meetup_at)
+  const dateStr = date.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' })
+  const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div style={{
+      background: t.surface, border: `1px solid ${t.border}`,
+      borderRadius: '12px', padding: '14px', marginBottom: '10px',
+      transition: 'border-color 0.15s'
+    }} className="animate-fadeIn">
+
+      {/* Header: title + distance */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
+        <h4 style={{
+          fontSize: '16px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif",
+          letterSpacing: '0.3px', color: t.text, margin: 0, lineHeight: 1.2, flex: 1
+        }}>{m.title}</h4>
+        {typeof m.distance === 'number' && (
+          <span style={{
+            flexShrink: 0,
+            background: 'rgba(255,107,53,0.12)',
+            border: '1px solid rgba(255,107,53,0.25)',
+            borderRadius: '50px', padding: '2px 8px',
+            fontSize: '11px', fontWeight: 700,
+            color: 'var(--color-accent-primary)',
+            fontFamily: "'Barlow', sans-serif"
+          }}>
+            {m.distance < 1 ? '<1 km' : `${Math.round(m.distance)} km`}
+          </span>
+        )}
+      </div>
+
+      {/* Date + time */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span style={{ fontWeight: 600, color: t.text }}>{dateStr}</span>
+        <span>·</span>
+        <span>{timeStr}</span>
+      </div>
+
+      {/* Location */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: m.description ? '8px' : '10px', color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span>{m.location}</span>
+      </div>
+
+      {/* Description */}
+      {m.description && (
+        <p style={{ color: t.text, fontSize: '13px', lineHeight: 1.5, marginBottom: '10px', fontFamily: "'Barlow', sans-serif" }}>
+          {m.description}
+        </p>
+      )}
+
+      {/* Footer: organizer + join button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: `1px solid ${t.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{
+            width: '22px', height: '22px', borderRadius: '50%',
+            background: 'var(--color-accent-primary)', overflow: 'hidden',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '10px', fontWeight: 700
+          }}>
+            {m.profile?.avatar_url
+              ? <img src={m.profile.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (m.profile?.username?.slice(0,2).toUpperCase() || '??')}
+          </div>
+          <span style={{ color: t.muted, fontSize: '11px', fontFamily: "'Barlow', sans-serif" }}>
+            @{m.profile?.username || 'jemand'}
+          </span>
+          {m.max_participants && (
+            <span style={{ color: t.muted, fontSize: '11px', fontFamily: "'Barlow', sans-serif" }}>
+              · max {m.max_participants}
+            </span>
+          )}
+        </div>
+        <button style={{
+          background: 'var(--color-accent-primary)', color: 'white', border: 'none',
+          borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
+          fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif"
+        }}>Teilnehmen</button>
+      </div>
     </div>
   )
 }
