@@ -48,9 +48,6 @@ export default function Profile({ darkMode, setDarkMode }) {
   const avatarRef = useRef()
   const bannerRef = useRef()
 
-  useEffect(() => { loadProfile() }, [])
-  useEffect(() => { if (profile) checkFollow() }, [profile])
-
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -98,6 +95,9 @@ const toggleFollow = async () => {
     setFollowerCount(prev => prev + 1)
   }
 }
+
+  useEffect(() => { loadProfile() }, [])
+  useEffect(() => { if (profile) checkFollow() }, [profile])
 
   const saveProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -199,7 +199,7 @@ const toggleFollow = async () => {
           <div style={{
             width: '80px', height: '80px', borderRadius: '50%',
             border: `3px solid ${t.bg}`, overflow: 'hidden',
-            background: '#6C63FF', display: 'flex', alignItems: 'center',
+            background: 'var(--color-accent-primary)', display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: '28px', fontWeight: '700', color: 'white'
           }}>
             {profile?.avatar_url
@@ -211,7 +211,7 @@ const toggleFollow = async () => {
               <button onClick={() => avatarRef.current.click()} style={{
                 position: 'absolute', bottom: '0', right: '0',
                 width: '26px', height: '26px', borderRadius: '50%',
-                background: '#6C63FF', border: `2px solid ${t.bg}`,
+                background: 'var(--color-accent-primary)', border: `2px solid ${t.bg}`,
                 color: 'white', cursor: 'pointer', fontSize: '12px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>{uploadingAvatar ? '...' : '✎'}</button>
@@ -229,19 +229,31 @@ const toggleFollow = async () => {
           <input ref={avatarRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={e => e.target.files[0] && uploadImage(e.target.files[0], 'avatars', 'avatar')} />
         </div>
-        <button onClick={() => { setEditing(true); setEditingImages(true) }} style={{
-          background: 'transparent', border: `1px solid ${t.border}`,
-          color: t.text, borderRadius: '8px', padding: '8px 16px',
-          cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
-        }}>✏️ Bearbeiten</button>
       </div>
 
       {/* Info */}
       <div style={{ padding: '0 16px 12px', borderBottom: `1px solid ${t.border}` }}>
+        {/* Name + Edit Icon in einer Zeile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
             @{profile?.username}
           </h2>
+          {/* Edit Icon direkt neben Name */}
+          <button
+            onClick={() => { setEditing(true); setEditingImages(true) }}
+            style={{
+              background: 'transparent', border: 'none', padding: '4px',
+              cursor: 'pointer', color: t.muted, display: 'flex', alignItems: 'center',
+              transition: 'color 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = t.muted}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
           {/* Liga Badge */}
           <div style={{
             background: league.color + '22', border: `1px solid ${league.color}66`,
@@ -254,28 +266,41 @@ const toggleFollow = async () => {
             </span>
           </div>
         </div>
-        {profile?.location && <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px' }}>📍 {profile.location}</p>}
+        {profile?.location && (
+          <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            {profile.location}
+          </p>
+        )}
         {profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6' }}>{profile.bio}</p>}
       </div>
 
-      {/* Stats */}
-      {/* Stats */}
-<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', borderBottom: `1px solid ${t.border}` }}>
-  {[
-    { label: 'Touren', value: routes.length },
-    { label: 'km', value: Math.round(totalKm) },
-    { label: 'Follower', value: followerCount },
-    { label: 'Folge ich', value: followingCount },
-  ].map((stat, i) => (
-    <div key={stat.label} style={{
-      padding: '14px 4px', textAlign: 'center',
-      borderRight: i < 3 ? `1px solid ${t.border}` : 'none'
-    }}>
-      <p style={{ fontSize: '20px', fontWeight: '700', color: '#6C63FF', marginBottom: '2px', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
-      <p style={{ fontSize: '10px', color: t.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
-    </div>
-  ))}
-</div>
+      {/* Stats als Kacheln */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', padding: '12px 16px', borderBottom: `1px solid ${t.border}` }}>
+        {[
+          { label: 'Touren', value: routes.length },
+          { label: 'km', value: Math.round(totalKm) },
+          { label: 'Follower', value: followerCount },
+          { label: 'Folge ich', value: followingCount },
+        ].map(stat => (
+          <div key={stat.label} style={{
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: '10px',
+            padding: '10px 6px',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '20px', fontWeight: '700', color: 'var(--color-accent-primary)', marginBottom: '2px', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>
+              {stat.value}
+            </p>
+            <p style={{ fontSize: '9px', color: t.muted, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Barlow', sans-serif" }}>
+              {stat.label}
+            </p>
+          </div>
+        ))}
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, overflowX: 'auto' }}>
@@ -301,21 +326,22 @@ const toggleFollow = async () => {
 
         {/* Posts */}
         {activeTab === 'posts' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
+          <div style={{ padding: '12px 16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
               {[1,2,3,4,5,6].map(i => (
                 <div key={i} style={{
                   aspectRatio: '1', background: t.surface,
                   border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  <p style={{ color: t.muted, fontSize: '20px' }}>📷</p>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
                 </div>
               ))}
             </div>
-            <p style={{ color: t.muted, fontSize: '13px', textAlign: 'center', padding: '16px' }}>
-              Posts kommen in Runde 4
-            </p>
           </div>
         )}
 
@@ -495,7 +521,21 @@ const toggleFollow = async () => {
             className="animate-slideUp">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ color: t.text, fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>Profil bearbeiten</h3>
-              <button onClick={() => { setEditing(false); setEditingImages(false) }} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px' }}>✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Settings-Icon im Edit-Modal */}
+                <button onClick={() => setShowSettings(true)} style={{
+                  background: 'none', border: `1px solid ${t.border}`, color: t.muted,
+                  cursor: 'pointer', borderRadius: '8px', padding: '6px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'color 0.15s, border-color 0.15s'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                </button>
+                <button onClick={() => { setEditing(false); setEditingImages(false) }} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px' }}>✕</button>
+              </div>
             </div>
             <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
             <input value={editData.username} onChange={e => setEditData({...editData, username: e.target.value})}
@@ -580,16 +620,17 @@ const toggleFollow = async () => {
   </div>
 )}
 
-      {/* Settings Button */}
-      <button onClick={() => setShowSettings(true)} style={{
+      {/* Plus FAB Button */}
+      <button onClick={() => { setEditing(true); setEditingImages(true) }} style={{
         position: 'fixed', bottom: '80px', right: 'calc(50% - 224px)',
-        background: '#6C63FF', border: 'none', borderRadius: '50%',
+        background: 'var(--color-accent-primary)', border: 'none', borderRadius: '50%',
         width: '44px', height: '44px', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 16px rgba(108,99,255,0.4)', zIndex: 100
+        boxShadow: '0 4px 16px rgba(255,107,53,0.4)', zIndex: 100
       }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
     </div>
