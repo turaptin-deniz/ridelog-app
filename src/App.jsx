@@ -7,6 +7,7 @@ import Feed from './pages/Feed'
 import Profile from './pages/Profile'
 import Messages from './pages/Messages'
 import Discover from './pages/Discover'
+import CreateMenu from './components/CreateMenu'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -18,6 +19,7 @@ function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('de')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -251,10 +253,7 @@ function App() {
           {/* Center Plus Button */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 1600 }}>
             <button
-              onClick={() => {
-                // Trigger create action on current page
-                window.dispatchEvent(new CustomEvent('ridelog:plus-click', { detail: { page: activePage } }))
-              }}
+              onClick={() => setShowCreate(true)}
               style={{
                 width: '52px', height: '52px',
                 background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
@@ -284,6 +283,17 @@ function App() {
 
           {NAV_RIGHT.map(item => <NavBtn key={item.id} item={item} />)}
         </div>
+
+        {/* Create Menu */}
+        <CreateMenu
+          open={showCreate}
+          onClose={() => setShowCreate(false)}
+          onCreated={(kind) => {
+            // Switch to the page that shows what was just created
+            if (kind === 'post') setActivePage('feed')
+            if (kind === 'meetup') setActivePage('map')
+          }}
+        />
 
         {/* Settings Modal (centered) */}
         {showSettings && (

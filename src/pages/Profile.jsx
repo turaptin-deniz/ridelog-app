@@ -44,16 +44,7 @@ export default function Profile({ darkMode, setDarkMode }) {
   const avatarRef = useRef()
   const bannerRef = useRef()
 
-  // Listen for global plus-button click → enter edit mode when on profile page
-  useEffect(() => {
-    const handlePlus = (e) => {
-      if (e.detail?.page === 'profil') {
-        setEditing(true)
-      }
-    }
-    window.addEventListener('ridelog:plus-click', handlePlus)
-    return () => window.removeEventListener('ridelog:plus-click', handlePlus)
-  }, [])
+  // Plus button in nav no longer triggers edit — edit is the pencil icon next to username
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
