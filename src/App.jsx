@@ -320,8 +320,80 @@ function App() {
                 }}>×</button>
               </div>
 
+              {/* Theme Toggle — segmented switch */}
+              <div style={{
+                position: 'relative',
+                display: 'grid', gridTemplateColumns: '1fr 1fr',
+                background: t.bg,
+                border: `1px solid ${t.border}`,
+                borderRadius: 'var(--radius-full)',
+                padding: '4px',
+                marginBottom: 'var(--space-2)',
+                height: '44px',
+                overflow: 'hidden'
+              }}>
+                {/* Sliding indicator */}
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  left: darkMode ? 'calc(50% + 0px)' : '4px',
+                  width: 'calc(50% - 4px)',
+                  height: 'calc(100% - 8px)',
+                  background: `linear-gradient(135deg, ${t.accent} 0%, #ff5a1f 100%)`,
+                  borderRadius: 'var(--radius-full)',
+                  boxShadow: '0 2px 10px rgba(255, 107, 53, 0.35)',
+                  transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  zIndex: 1
+                }} />
+
+                {/* Light Mode option */}
+                <button
+                  onClick={() => setDarkMode(false)}
+                  style={{
+                    position: 'relative', zIndex: 2,
+                    background: 'transparent', border: 'none',
+                    color: !darkMode ? '#ffffff' : t.text,
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    fontFamily: 'var(--font-family-primary)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'color 280ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                  </svg>
+                  Light
+                </button>
+
+                {/* Dark Mode option */}
+                <button
+                  onClick={() => setDarkMode(true)}
+                  style={{
+                    position: 'relative', zIndex: 2,
+                    background: 'transparent', border: 'none',
+                    color: darkMode ? '#ffffff' : t.text,
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    fontFamily: 'var(--font-family-primary)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'color 280ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                  Dark
+                </button>
+              </div>
+
+              {/* Other settings */}
               {[
-                { label: darkMode ? 'Light Mode' : 'Dark Mode', icon: darkMode ? '☀️' : '🌙', action: () => setDarkMode(!darkMode) },
                 { label: 'Privatsphäre', icon: '🔒', action: () => {} },
                 { label: 'Sprache', icon: '🌍', action: () => setShowLanguage(true) },
               ].map(item => (
