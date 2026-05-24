@@ -2,6 +2,36 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import RouteDetail from '../components/RouteDetail'
 
+// ── Motorcycle brands ────────────────────────────────────────────────────────
+const BIKE_BRANDS = [
+  'Aprilia', 'Benelli', 'Beta', 'BMW', 'Brixton', 'CF Moto', 'Ducati',
+  'Gas Gas', 'Harley-Davidson', 'Honda', 'Husqvarna', 'Indian', 'Jawa',
+  'Kawasaki', 'KTM', 'Kove', 'Moto Guzzi', 'MV Agusta', 'Royal Enfield',
+  'Sherco', 'Suzuki', 'Triumph', 'Ural', 'Yamaha', 'Zontes',
+]
+
+// ── Wikipedia image fetch ────────────────────────────────────────────────────
+async function fetchBikeImage(brand, model) {
+  const query = `${brand} ${model} motorcycle`
+  try {
+    const sr = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=5`,
+      { headers: { 'Accept': 'application/json' } }
+    )
+    const sd = await sr.json()
+    for (const hit of sd.query?.search || []) {
+      const ir = await fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(hit.title)}&prop=pageimages&format=json&origin=*&pithumbsize=700&piprop=thumbnail`
+      )
+      const id = await ir.json()
+      const src = Object.values(id.query?.pages || {})[0]?.thumbnail?.source
+      // Skip flags, logos, icons, and maps
+      if (src && !/flag|logo|icon|map|coat|emblem/i.test(src)) return src
+    }
+  } catch { /* network fail — fine */ }
+  return null
+}
+
 const LEAGUES = [
   { id: 'bronze', label: 'Bronze', icon: '🥉', color: '#cd7f32', min: 0, max: 500 },
   { id: 'silver', label: 'Silber', icon: '🥈', color: '#c0c0c0', min: 500, max: 1500 },
@@ -38,6 +68,7 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [earnedBadges, setEarnedBadges] = useState([])
   const [userPosts, setUserPosts] = useState([])
   const [selectedPost, setSelectedPost] = useState(null)
+  const [showAddBike, setShowAddBike] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
@@ -600,41 +631,45 @@ const toggleFollow = async () => {
         {/* Garage */}
         {activeTab === 'garage' && (
           <div style={{ padding: '16px' }}>
+            {/* Add bike button */}
+            <button
+              onClick={() => setShowAddBike(true)}
+              style={{
+                width: '100%', marginBottom: '14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                padding: '12px', background: 'var(--color-accent-primary)',
+                border: 'none', borderRadius: '12px', cursor: 'pointer',
+                color: 'white', fontSize: '14px', fontWeight: 700,
+                fontFamily: "'Barlow', sans-serif",
+                boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#2563eb'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-accent-primary)'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Motorrad hinzufügen
+            </button>
+
             {bikes.length === 0 ? (
-              <p style={{ color: t.muted, fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>Noch kein Motorrad eingetragen</p>
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="9" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
+                </svg>
+                <p style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>Noch kein Motorrad eingetragen</p>
+              </div>
             ) : (
-              bikes.map(bike => (
-                <div key={bike.id} style={{
-                  background: '#111', border: `1px solid #222`,
-                  borderRadius: '12px', padding: '16px', marginBottom: '12px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div>
-                      <p style={{ color: '#3b82f6', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{bike.brand}</p>
-                      <p style={{ color: '#fff', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{bike.model} {bike.year}</p>
-                    </div>
-                    <div style={{ background: '#3b82f622', borderRadius: '8px', padding: '6px 10px', textAlign: 'center' }}>
-                      <p style={{ color: '#3b82f6', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{bike.hp || '–'}</p>
-                      <p style={{ color: '#3b82f6', fontSize: '10px' }}>PS</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                    {[
-                      { label: 'CC', value: bike.cc },
-                      { label: 'NM', value: bike.torque },
-                      { label: 'KG', value: bike.weight },
-                    ].filter(s => s.value).map(spec => (
-                      <div key={spec.label} style={{ background: '#1a1a1a', borderRadius: '6px', padding: '8px', textAlign: 'center' }}>
-                        <p style={{ color: '#555', fontSize: '9px', textTransform: 'uppercase', marginBottom: '2px' }}>{spec.label}</p>
-                        <p style={{ color: '#fff', fontSize: '14px', fontWeight: '700' }}>{spec.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {bike.odometer && (
-                    <p style={{ color: '#555', fontSize: '12px', marginTop: '10px' }}>🛣️ {bike.odometer.toLocaleString()} km</p>
-                  )}
-                </div>
-              ))
+              bikes.map(bike => <BikeCard key={bike.id} bike={bike} t={t} />)
+            )}
+
+            {showAddBike && (
+              <AddBikeModal
+                t={t}
+                onClose={() => setShowAddBike(false)}
+                onSaved={() => { setShowAddBike(false); loadProfile() }}
+              />
             )}
           </div>
         )}
@@ -846,6 +881,299 @@ function PostDetailModal({ post, profile, t, onClose }) {
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── BikeCard ─────────────────────────────────────────────────────────────────
+function BikeCard({ bike, t }) {
+  const specs = [
+    { label: 'CC', value: bike.cc },
+    { label: 'NM', value: bike.torque },
+    { label: 'KG', value: bike.weight },
+  ].filter(s => s.value)
+
+  return (
+    <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', border: `1px solid ${t.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+      {/* Image / gradient header */}
+      <div style={{ height: '180px', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+        {bike.image_url && (
+          <img
+            src={bike.image_url}
+            alt={`${bike.brand} ${bike.model}`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={e => { e.target.style.display = 'none' }}
+          />
+        )}
+        {/* Dark gradient for text readability */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%)' }} />
+
+        {/* Brand + model bottom-left */}
+        <div style={{ position: 'absolute', bottom: '14px', left: '16px', right: bike.hp ? '70px' : '16px' }}>
+          <p style={{ color: '#3b82f6', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '3px', fontFamily: "'Barlow', sans-serif" }}>
+            {bike.brand}
+          </p>
+          <p style={{ color: 'white', fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', lineHeight: 1 }}>
+            {bike.model}
+            {bike.year && <span style={{ fontSize: '15px', opacity: 0.65, marginLeft: '8px', fontWeight: 500 }}>{bike.year}</span>}
+          </p>
+        </div>
+
+        {/* PS badge top-right */}
+        {bike.hp && (
+          <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(59,130,246,0.85)', borderRadius: '10px', padding: '8px 12px', textAlign: 'center', backdropFilter: 'blur(6px)', border: '1px solid rgba(59,130,246,0.4)' }}>
+            <p style={{ color: 'white', fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{bike.hp}</p>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', marginTop: '1px' }}>PS</p>
+          </div>
+        )}
+      </div>
+
+      {/* Specs row */}
+      <div style={{ padding: '12px 14px', background: t.surface }}>
+        {specs.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${specs.length}, 1fr)`, gap: '8px', marginBottom: bike.odometer ? '10px' : 0 }}>
+            {specs.map(spec => (
+              <div key={spec.label} style={{ background: t.bg, borderRadius: '8px', padding: '8px 6px', textAlign: 'center', border: `1px solid ${t.border}` }}>
+                <p style={{ color: t.muted, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px', fontFamily: "'Barlow', sans-serif" }}>{spec.label}</p>
+                <p style={{ color: t.text, fontSize: '17px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{spec.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        {bike.odometer && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 10px', background: t.bg, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="9" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
+            </svg>
+            <span style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+              {bike.odometer.toLocaleString('de-DE')} km
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── AddBikeModal ──────────────────────────────────────────────────────────────
+function AddBikeModal({ t, onClose, onSaved }) {
+  const CURRENT_YEAR = new Date().getFullYear()
+  const [form, setForm] = useState({
+    brand: '', customBrand: '', model: '',
+    year: String(CURRENT_YEAR),
+    hp: '', cc: '', torque: '', weight: '', odometer: ''
+  })
+  const [imageUrl, setImageUrl] = useState(null)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [brandSearch, setBrandSearch] = useState('')
+  const [showBrandList, setShowBrandList] = useState(false)
+
+  const effectiveBrand = form.brand === '__other__' ? form.customBrand : form.brand
+  const filteredBrands = BIKE_BRANDS.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
+
+  // Auto-fetch image when brand + model are set
+  useEffect(() => {
+    if (!effectiveBrand || !form.model || form.model.length < 2) return
+    const timer = setTimeout(async () => {
+      setImageLoading(true)
+      setImageUrl(null)
+      const url = await fetchBikeImage(effectiveBrand, form.model)
+      setImageUrl(url)
+      setImageLoading(false)
+    }, 900)
+    return () => clearTimeout(timer)
+  }, [effectiveBrand, form.model])
+
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  const save = async () => {
+    setError('')
+    if (!effectiveBrand || !form.model.trim()) { setError('Marke und Modell sind Pflichtfelder.'); return }
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const base = {
+        user_id: user.id,
+        brand: effectiveBrand,
+        model: form.model.trim(),
+        year: form.year ? parseInt(form.year) : null,
+        hp: form.hp ? parseFloat(form.hp) : null,
+        cc: form.cc ? parseInt(form.cc) : null,
+        torque: form.torque ? parseInt(form.torque) : null,
+        weight: form.weight ? parseInt(form.weight) : null,
+        odometer: form.odometer ? parseInt(form.odometer) : null,
+      }
+      // Try with image_url first; gracefully fall back if column doesn't exist
+      let { error: insErr } = await supabase.from('motorcycles').insert({ ...base, image_url: imageUrl || null })
+      if (insErr && /image_url|column/i.test(insErr.message || '')) {
+        const r = await supabase.from('motorcycles').insert(base)
+        if (r.error) throw r.error
+      } else if (insErr) throw insErr
+      onSaved()
+    } catch (e) {
+      setError(e.message || 'Fehler beim Speichern.')
+      setSaving(false)
+    }
+  }
+
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    background: t.bg, border: `1px solid ${t.border}`,
+    borderRadius: '10px', padding: '11px 14px',
+    color: t.text, fontSize: '15px',
+    fontFamily: "'Barlow', sans-serif",
+    outline: 'none', transition: 'border-color 0.15s'
+  }
+  const labelStyle = {
+    display: 'block', fontSize: '10px', fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+    color: t.muted, marginBottom: '5px', fontFamily: "'Barlow', sans-serif"
+  }
+  const focusOn = e => e.target.style.borderColor = '#3b82f6'
+  const focusOff = e => e.target.style.borderColor = t.border
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px 20px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-scaleIn">
+
+        {/* Header */}
+        <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+          <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Motorrad hinzufügen</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+
+          {/* Image preview */}
+          <div style={{ height: '160px', borderRadius: '14px', overflow: 'hidden', marginBottom: '18px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {imageLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" className="animate-spin" style={{ color: '#3b82f6' }}>
+                  <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="40" strokeDashoffset="10"/>
+                </svg>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>Bild wird geladen…</p>
+              </div>
+            ) : imageUrl ? (
+              <>
+                <img src={imageUrl} alt="bike" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={() => setImageUrl(null)} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6) 100%)' }} />
+                <div style={{ position: 'absolute', bottom: '10px', right: '12px', background: 'rgba(59,130,246,0.85)', borderRadius: '6px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style={{ color: 'white', fontSize: '10px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}>Bild gefunden</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: 0.4 }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="9" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
+                </svg>
+                <p style={{ color: 'white', fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>
+                  {effectiveBrand && form.model ? 'Kein Bild gefunden' : 'Bild wird automatisch geladen'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '14px', fontFamily: "'Barlow', sans-serif" }}>
+              {error}
+            </div>
+          )}
+
+          {/* Brand picker */}
+          <div style={{ marginBottom: '14px', position: 'relative' }}>
+            <label style={labelStyle}>Marke *</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                value={brandSearch || effectiveBrand}
+                onChange={e => { setBrandSearch(e.target.value); set('brand', ''); setShowBrandList(true) }}
+                onFocus={() => setShowBrandList(true)}
+                onBlur={() => setTimeout(() => setShowBrandList(false), 180)}
+                placeholder="z.B. Yamaha, BMW, Kawasaki…"
+                style={{ ...inputStyle, paddingRight: '36px' }}
+                onFocusCapture={focusOn} onBlurCapture={focusOff}
+              />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            {showBrandList && filteredBrands.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: t.surface, border: `1px solid ${t.border}`, borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
+                {filteredBrands.map(b => (
+                  <button key={b} onMouseDown={() => { set('brand', b); setBrandSearch(''); setShowBrandList(false) }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px 14px', color: t.text, cursor: 'pointer', fontFamily: "'Barlow', sans-serif", fontSize: '14px', borderBottom: `1px solid ${t.border}`, transition: 'background 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.bg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    {b}
+                  </button>
+                ))}
+                <button onMouseDown={() => { set('brand', '__other__'); setBrandSearch(''); setShowBrandList(false) }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px 14px', color: '#3b82f6', cursor: 'pointer', fontFamily: "'Barlow', sans-serif", fontSize: '14px', fontWeight: 600 }}>
+                  + Andere Marke eingeben
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Custom brand input */}
+          {form.brand === '__other__' && (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Markenname</label>
+              <input value={form.customBrand} onChange={e => set('customBrand', e.target.value)} placeholder="Marke eingeben" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          )}
+
+          {/* Model */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Modell *</label>
+            <input value={form.model} onChange={e => set('model', e.target.value)} placeholder="z.B. MT-07, Ninja ZX-6R, S1000RR" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+          </div>
+
+          {/* Year + HP */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Baujahr</label>
+              <input type="number" value={form.year} onChange={e => set('year', e.target.value)} min="1900" max={CURRENT_YEAR + 1} style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>PS (Leistung)</label>
+              <input type="number" value={form.hp} onChange={e => set('hp', e.target.value)} placeholder="z.B. 95" min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* CC + NM */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Hubraum (CC)</label>
+              <input type="number" value={form.cc} onChange={e => set('cc', e.target.value)} placeholder="z.B. 689" min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>Drehmoment (NM)</label>
+              <input type="number" value={form.torque} onChange={e => set('torque', e.target.value)} placeholder="z.B. 75" min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* Weight + Odometer */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+            <div>
+              <label style={labelStyle}>Gewicht (KG)</label>
+              <input type="number" value={form.weight} onChange={e => set('weight', e.target.value)} placeholder="z.B. 193" min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>Kilometerstand</label>
+              <input type="number" value={form.odometer} onChange={e => set('odometer', e.target.value)} placeholder="z.B. 12500" min="0" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* Save button */}
+          <button onClick={save} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? t.muted : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", cursor: saving ? 'not-allowed' : 'pointer', boxShadow: saving ? 'none' : '0 4px 15px rgba(59,130,246,0.3)', transition: 'all 0.15s', marginBottom: '8px' }}>
+            {saving ? 'Wird gespeichert…' : 'Motorrad hinzufügen'}
+          </button>
+        </div>
       </div>
     </div>
   )
