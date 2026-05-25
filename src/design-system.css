@@ -162,9 +162,9 @@ body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-family: var(--font-family-primary);
-  font-size: var(--font-size-base);
+  font-size: 15px;               /* ↑ slightly larger default */
   line-height: var(--line-height-normal);
-  font-weight: var(--font-weight-normal);
+  font-weight: 500;              /* ↑ medium weight by default for better readability */
 }
 
 /* ====================================================================
@@ -512,11 +512,13 @@ label {
    RESPONSIVE UTILITIES
    ==================================================================== */
 
+/* ── Font-size scale controlled by data-font-size on <html> ── */
+[data-font-size="sm"] body { font-size: 13px; }
+[data-font-size="md"] body { font-size: 15px; }   /* default */
+[data-font-size="lg"] body { font-size: 17px; }
+
 @media (max-width: 479px) {
-  /* Mobile optimizations */
-  html {
-    font-size: 14px;
-  }
+  /* Mobile: respect font-size setting, no hard override */
 }
 
 @media (min-width: 640px) {

@@ -8,6 +8,7 @@ import Profile from './pages/Profile'
 import Messages from './pages/Messages'
 import Discover from './pages/Discover'
 import CreateMenu from './components/CreateMenu'
+import { useTranslation } from './i18n'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -20,6 +21,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('revmeet-fontsize') || 'md')
+
+  const T = useTranslation(selectedLanguage)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -35,6 +39,12 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
   }, [darkMode])
+
+  // Apply font size scale to <html>
+  useEffect(() => {
+    document.documentElement.dataset.fontSize = fontSize
+    localStorage.setItem('revmeet-fontsize', fontSize)
+  }, [fontSize])
 
   const t = {
     bg: 'var(--color-bg-primary)',
@@ -63,27 +73,27 @@ function App() {
   const renderPage = () => {
     // When user is searching, show Discover regardless of activePage
     if (searchQuery.trim().length > 0) {
-      return <Discover darkMode={darkMode} searchQuery={searchQuery} onSelectUser={navigateToProfile} />
+      return <Discover darkMode={darkMode} searchQuery={searchQuery} onSelectUser={navigateToProfile} lang={selectedLanguage} />
     }
     switch(activePage) {
-      case 'map': return <Map darkMode={darkMode} onSelectRider={navigateToProfile} />
-      case 'feed': return <Feed darkMode={darkMode} />
-      case 'messages': return <Messages darkMode={darkMode} />
-      case 'profil': return <Profile darkMode={darkMode} setDarkMode={setDarkMode} />
-      case 'discover': return <Discover darkMode={darkMode} onSelectUser={navigateToProfile} />
-      default: return <Map darkMode={darkMode} onSelectRider={navigateToProfile} />
+      case 'map': return <Map darkMode={darkMode} onSelectRider={navigateToProfile} lang={selectedLanguage} />
+      case 'feed': return <Feed darkMode={darkMode} lang={selectedLanguage} />
+      case 'messages': return <Messages darkMode={darkMode} lang={selectedLanguage} />
+      case 'profil': return <Profile darkMode={darkMode} setDarkMode={setDarkMode} lang={selectedLanguage} />
+      case 'discover': return <Discover darkMode={darkMode} onSelectUser={navigateToProfile} lang={selectedLanguage} />
+      default: return <Map darkMode={darkMode} onSelectRider={navigateToProfile} lang={selectedLanguage} />
     }
   }
 
   // 4 main nav items + center plus button
   const NAV_LEFT = [
-    { id: 'map', label: 'Karte', icon: (active) => (
+    { id: 'map', label: T('nav_map'), icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
         <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
         <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
       </svg>
     )},
-    { id: 'feed', label: 'Feed', icon: (active) => (
+    { id: 'feed', label: T('nav_feed'), icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
         <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
       </svg>
@@ -91,12 +101,12 @@ function App() {
   ]
 
   const NAV_RIGHT = [
-    { id: 'messages', label: 'Chats', icon: (active) => (
+    { id: 'messages', label: T('nav_chats'), icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
     )},
-    { id: 'profil', label: 'Profil', icon: (active) => (
+    { id: 'profil', label: T('nav_profile'), icon: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
       </svg>
@@ -183,7 +193,7 @@ function App() {
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder="Entdecken..."
+              placeholder={T('search_placeholder')}
               style={{
                 flex: 1, minWidth: 0, background: 'transparent', border: 'none',
                 color: t.text, fontSize: 'var(--font-size-sm)',
@@ -288,6 +298,7 @@ function App() {
         <CreateMenu
           open={showCreate}
           onClose={() => setShowCreate(false)}
+          lang={selectedLanguage}
           onCreated={(kind) => {
             // Switch to the page that shows what was just created
             if (kind === 'post') setActivePage('feed')
@@ -322,12 +333,17 @@ function App() {
                   fontWeight: 'var(--font-weight-bold)',
                   fontFamily: "var(--font-family-condensed)", margin: 0
                 }}>
-                  Einstellungen
+                  {T('settings')}
                 </h3>
                 <button onClick={() => setShowSettings(false)} style={{
                   background: 'none', border: 'none', color: t.muted,
                   cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1
                 }}>×</button>
+              </div>
+
+              {/* Theme label */}
+              <div style={{ color: t.muted, fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-semibold)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-family-primary)' }}>
+                {T('settings_theme')}
               </div>
 
               {/* Theme Toggle — segmented switch */}
@@ -338,7 +354,7 @@ function App() {
                 border: `1px solid ${t.border}`,
                 borderRadius: 'var(--radius-full)',
                 padding: '4px',
-                marginBottom: 'var(--space-2)',
+                marginBottom: 'var(--space-4)',
                 height: '44px',
                 overflow: 'hidden'
               }}>
@@ -376,7 +392,7 @@ function App() {
                     <circle cx="12" cy="12" r="4"/>
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
                   </svg>
-                  Light
+                  {T('settings_light')}
                 </button>
 
                 {/* Dark Mode option */}
@@ -398,14 +414,63 @@ function App() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                   </svg>
-                  Dark
+                  {T('settings_dark')}
                 </button>
+              </div>
+
+              {/* Font size label */}
+              <div style={{ color: t.muted, fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-semibold)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 'var(--space-2)', fontFamily: 'var(--font-family-primary)' }}>
+                {T('settings_font_size')}
+              </div>
+
+              {/* Font size 3-way toggle */}
+              <div style={{
+                position: 'relative',
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                background: t.bg,
+                border: `1px solid ${t.border}`,
+                borderRadius: 'var(--radius-full)',
+                padding: '4px',
+                marginBottom: 'var(--space-4)',
+                height: '44px',
+                overflow: 'hidden'
+              }}>
+                {/* Sliding indicator */}
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  left: fontSize === 'sm' ? '4px' : fontSize === 'md' ? 'calc(33.33% + 0px)' : 'calc(66.66% + 0px)',
+                  width: 'calc(33.33% - 4px)',
+                  height: 'calc(100% - 8px)',
+                  background: `linear-gradient(135deg, ${t.accent} 0%, #2563eb 100%)`,
+                  borderRadius: 'var(--radius-full)',
+                  boxShadow: '0 2px 10px rgba(59, 130, 246, 0.35)',
+                  transition: 'left 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  zIndex: 1
+                }} />
+                {[
+                  { id: 'sm', label: T('settings_font_sm') },
+                  { id: 'md', label: T('settings_font_md') },
+                  { id: 'lg', label: T('settings_font_lg') },
+                ].map(opt => (
+                  <button key={opt.id} onClick={() => setFontSize(opt.id)} style={{
+                    position: 'relative', zIndex: 2,
+                    background: 'transparent', border: 'none',
+                    color: fontSize === opt.id ? '#ffffff' : t.text,
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    fontFamily: 'var(--font-family-primary)',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'color 280ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}>{opt.label}</button>
+                ))}
               </div>
 
               {/* Other settings */}
               {[
-                { label: 'Privatsphäre', icon: '🔒', action: () => {} },
-                { label: 'Sprache', icon: '🌍', action: () => setShowLanguage(true) },
+                { label: T('settings_privacy'), icon: '🔒', action: () => {} },
+                { label: T('settings_language'), icon: '🌍', action: () => setShowLanguage(true) },
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{
                   width: '100%', background: t.bg, border: `1px solid ${t.border}`,
@@ -433,7 +498,7 @@ function App() {
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(248, 113, 113, 0.1)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                Abmelden
+                {T('settings_logout')}
               </button>
             </div>
           </div>
@@ -465,17 +530,17 @@ function App() {
                   color: t.text, fontSize: 'var(--font-size-xl)',
                   fontWeight: 'var(--font-weight-bold)',
                   fontFamily: "var(--font-family-condensed)", margin: 0
-                }}>Sprache</h3>
+                }}>{T('settings_language')}</h3>
                 <button onClick={() => setShowLanguage(false)} style={{
                   background: 'none', border: 'none', color: t.muted,
                   cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1
                 }}>×</button>
               </div>
               {[
-                { label: 'Deutsch', flag: '🇩🇪', id: 'de' },
-                { label: 'Englisch', flag: '🇬🇧', id: 'en' },
-                { label: 'Französisch', flag: '🇫🇷', id: 'fr' },
-                { label: 'Spanisch', flag: '🇪🇸', id: 'es' },
+                { key: 'lang_de', flag: '🇩🇪', id: 'de' },
+                { key: 'lang_en', flag: '🇬🇧', id: 'en' },
+                { key: 'lang_fr', flag: '🇫🇷', id: 'fr' },
+                { key: 'lang_es', flag: '🇪🇸', id: 'es' },
               ].map(lang => (
                 <button key={lang.id} onClick={() => { setSelectedLanguage(lang.id); setShowLanguage(false) }} style={{
                   width: '100%',
@@ -489,7 +554,7 @@ function App() {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   transition: 'all var(--transition-fast)'
                 }}>
-                  <span>{lang.flag} {lang.label}</span>
+                  <span>{lang.flag} {T(lang.key)}</span>
                   {selectedLanguage === lang.id && <span style={{ color: t.accent, fontSize: '16px' }}>✓</span>}
                 </button>
               ))}

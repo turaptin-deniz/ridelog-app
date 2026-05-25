@@ -15,7 +15,14 @@ const getVideoDuration = (file) => new Promise(resolve => {
   v.onerror = () => { URL.revokeObjectURL(url); resolve(0) }
 })
 
-export default function CreateMenu({ open, onClose, onCreated }) {
+const VEHICLE_FILTERS = [
+  { id: 'all',   label: 'Alle Fahrzeuge',  emoji: '🚦' },
+  { id: 'motos', label: 'Nur Motorräder',  emoji: '🏍️' },
+  { id: 'cars',  label: 'Nur Autos',       emoji: '🚗' },
+  { id: 'quads', label: 'Quads & ATVs',    emoji: '🚜' },
+]
+
+export default function CreateMenu({ open, onClose, onCreated, lang }) {
   const [view, setView] = useState('menu')
   const [error, setError] = useState('')
 
@@ -28,6 +35,7 @@ export default function CreateMenu({ open, onClose, onCreated }) {
 
   // Meetup state
   const [meetup, setMeetup] = useState({ title: '', date: '', time: '', description: '', maxParticipants: '' })
+  const [vehicleFilter, setVehicleFilter] = useState('all')
   const [creatingMeetup, setCreatingMeetup] = useState(false)
   const newStop = () => ({ id: Math.random().toString(36).slice(2), input: '', address: '', lat: null, lng: null })
   const [stops, setStops] = useState([newStop()])
@@ -43,6 +51,7 @@ export default function CreateMenu({ open, onClose, onCreated }) {
       setActiveSlide(0)
       setPostContent('')
       setMeetup({ title: '', date: '', time: '', description: '', maxParticipants: '' })
+      setVehicleFilter('all')
       setStops([newStop()])
     }
   }, [open])
@@ -172,9 +181,18 @@ export default function CreateMenu({ open, onClose, onCreated }) {
         lat: meetingPoint.lat, lng: meetingPoint.lng,
         max_participants: meetup.maxParticipants ? parseInt(meetup.maxParticipants, 10) : null,
         waypoints: waypointsJson,
+        vehicle_filter: vehicleFilter,
       }
       let { error: insErr } = await supabase.from('meetups').insert(meetupPayload)
-      if (isMissingTable(insErr)) {
+      if (insErr && /vehicle_filter|column/i.test(insErr.message || '')) {
+        // vehicle_filter column missing — retry without it
+        const { vehicle_filter: _, ...payloadNoFilter } = meetupPayload
+        const r2 = await supabase.from('meetups').insert(payloadNoFilter)
+        if (r2.error && isMissingTable(r2.error)) {
+          const r3 = await supabase.from('routes').insert({ user_id: user.id, title: `[MEETUP] ${meetup.title}`, distance_km: 0, duration_minutes: 0, difficulty: 'easy', surface: 'asphalt', waypoints: waypointsJson })
+          if (r3.error) throw r3.error
+        } else if (r2.error) throw r2.error
+      } else if (isMissingTable(insErr)) {
         const r = await supabase.from('routes').insert({
           user_id: user.id, title: `[MEETUP] ${meetup.title}`,
           distance_km: 0, duration_minutes: 0, difficulty: 'easy', surface: 'asphalt',
@@ -245,7 +263,7 @@ export default function CreateMenu({ open, onClose, onCreated }) {
             <h3 style={{ fontFamily: 'var(--font-family-condensed)', fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
               {view === 'menu' && 'Erstellen'}
               {view === 'post' && 'Neuer Post'}
-              {view === 'meetup' && 'Tour planen'}
+              {view === 'meetup' && 'Event planen'}
             </h3>
           </div>
           <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>×</button>
@@ -264,7 +282,7 @@ export default function CreateMenu({ open, onClose, onCreated }) {
             <OptionCard onClick={() => setView('post')} accent="var(--color-accent-primary)" title="Post erstellen" desc="Bis zu 10 Fotos, Videos oder Text mit der Community teilen"
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>}
             />
-            <OptionCard onClick={() => setView('meetup')} accent="var(--color-accent-secondary)" title="Tour planen" desc="Biker-Treffen organisieren — Standort, Datum, Uhrzeit, Anmeldung"
+            <OptionCard onClick={() => setView('meetup')} accent="var(--color-accent-secondary)" title="Event planen" desc="Treffen organisieren — Standort, Datum, Fahrzeugtyp, Anmeldung"
               icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}
             />
           </div>
@@ -408,7 +426,34 @@ export default function CreateMenu({ open, onClose, onCreated }) {
               <label style={labelStyle}>Max. Teilnehmer (optional)</label>
               <input type="number" min="2" value={meetup.maxParticipants} onChange={e => setMeetup({ ...meetup, maxParticipants: e.target.value })} placeholder="z.B. 10" style={inputBase} onFocus={focusOn} onBlur={focusOff} />
             </div>
-            <PrimaryButton onClick={createMeetup} disabled={creatingMeetup} label={creatingMeetup ? 'Wird erstellt…' : 'Tour erstellen'} />
+
+            {/* Vehicle filter */}
+            <div>
+              <label style={labelStyle}>Fahrzeugtyp</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {VEHICLE_FILTERS.map(vf => (
+                  <button key={vf.id} onClick={() => setVehicleFilter(vf.id)} style={{
+                    padding: '10px 12px', background: vehicleFilter === vf.id ? 'rgba(59,130,246,0.12)' : 'var(--color-bg-primary)',
+                    border: `1.5px solid ${vehicleFilter === vf.id ? 'var(--color-accent-primary)' : 'var(--color-border-base)'}`,
+                    borderRadius: 'var(--radius-base)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    color: vehicleFilter === vf.id ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
+                    fontSize: 'var(--font-size-sm)', fontWeight: 600,
+                    fontFamily: 'var(--font-family-primary)', transition: 'all var(--transition-fast)'
+                  }}>
+                    <span style={{ fontSize: '18px', lineHeight: 1 }}>{vf.emoji}</span>
+                    <span>{vf.label}</span>
+                    {vehicleFilter === vf.id && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <PrimaryButton onClick={createMeetup} disabled={creatingMeetup} label={creatingMeetup ? 'Wird erstellt…' : 'Event erstellen'} />
           </div>
         )}
       </div>

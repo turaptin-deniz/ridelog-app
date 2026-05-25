@@ -2,13 +2,38 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import RouteDetail from '../components/RouteDetail'
 
-// ── Motorcycle brands ────────────────────────────────────────────────────────
-const BIKE_BRANDS = [
+// ── Vehicle types ─────────────────────────────────────────────────────────────
+const VEHICLE_TYPES = [
+  { id: 'motorrad',   label: 'Motorrad',    emoji: '🏍️' },
+  { id: 'auto',       label: 'Auto',        emoji: '🚗' },
+  { id: 'sportwagen', label: 'Sportwagen',  emoji: '🏎️' },
+  { id: 'suv',        label: 'SUV / Pickup',emoji: '🚙' },
+  { id: 'quad',       label: 'Quad / ATV',  emoji: '🚜' },
+  { id: 'sonstiges',  label: 'Sonstiges',   emoji: '🚘' },
+]
+
+// ── Brands per category ───────────────────────────────────────────────────────
+const MOTO_BRANDS = [
   'Aprilia', 'Benelli', 'Beta', 'BMW', 'Brixton', 'CF Moto', 'Ducati',
   'Gas Gas', 'Harley-Davidson', 'Honda', 'Husqvarna', 'Indian', 'Jawa',
   'Kawasaki', 'KTM', 'Kove', 'Moto Guzzi', 'MV Agusta', 'Royal Enfield',
   'Sherco', 'Suzuki', 'Triumph', 'Ural', 'Yamaha', 'Zontes',
 ]
+const CAR_BRANDS = [
+  'Alfa Romeo', 'Aston Martin', 'Audi', 'Bentley', 'BMW', 'Bugatti',
+  'Chevrolet', 'Ferrari', 'Ford', 'Honda', 'Hyundai', 'Jaguar', 'Jeep',
+  'Kia', 'Lamborghini', 'Land Rover', 'Lexus', 'Maserati', 'Mazda',
+  'McLaren', 'Mercedes-Benz', 'MINI', 'Mitsubishi', 'Nissan', 'Opel',
+  'Peugeot', 'Porsche', 'Renault', 'Rolls-Royce', 'Seat', 'Skoda',
+  'Subaru', 'Tesla', 'Toyota', 'Volkswagen', 'Volvo',
+]
+const QUAD_BRANDS = [
+  'Arctic Cat', 'Can-Am', 'CF Moto', 'Honda', 'Husqvarna', 'Kawasaki',
+  'KTM', 'Kymco', 'Polaris', 'Quadix', 'Suzuki', 'TGB', 'Yamaha',
+]
+
+// Legacy alias so nothing else breaks
+const BIKE_BRANDS = MOTO_BRANDS
 
 // ── Wikipedia image fetch ────────────────────────────────────────────────────
 async function fetchBikeImage(brand, model) {
@@ -40,20 +65,32 @@ const LEAGUES = [
   { id: 'diamond', label: 'Diamant', icon: '💠', color: '#b9f2ff', min: 6000, max: 99999 },
 ]
 
-const ALL_BADGES = [
-  { type: 'first_ride', icon: '🏁', label: 'Erste Fahrt', desc: 'Erste Tour getracked', condition: (p) => p.total_rides >= 1 },
-  { type: 'km_100', icon: '🛣️', label: '100 km Club', desc: '100 km gefahren', condition: (p) => p.total_km >= 100 },
-  { type: 'km_500', icon: '🗺️', label: '500 km Club', desc: '500 km gefahren', condition: (p) => p.total_km >= 500 },
-  { type: 'km_1000', icon: '🌍', label: '1000 km Club', desc: '1000 km gefahren', condition: (p) => p.total_km >= 1000 },
-  { type: 'km_5000', icon: '🚀', label: '5000 km Club', desc: '5000 km gefahren', condition: (p) => p.total_km >= 5000 },
-  { type: 'speed_100', icon: '⚡', label: 'Triple Digits', desc: '100 km/h erreicht', condition: (p) => p.max_speed >= 100 },
-  { type: 'speed_150', icon: '🔥', label: 'Speed Demon', desc: '150 km/h erreicht', condition: (p) => p.max_speed >= 150 },
-  { type: 'speed_200', icon: '💨', label: '200er Club', desc: '200 km/h erreicht', condition: (p) => p.max_speed >= 200 },
-  { type: 'long_100', icon: '🏕️', label: 'Langstrecke', desc: '100 km am Stück', condition: (p) => p.longest_ride >= 100 },
-  { type: 'long_300', icon: '🏔️', label: 'Ausdauer', desc: '300 km am Stück', condition: (p) => p.longest_ride >= 300 },
-  { type: 'rides_10', icon: '🏍️', label: 'Regelmäßig', desc: '10 Touren gefahren', condition: (p) => p.total_rides >= 10 },
-  { type: 'rides_50', icon: '👑', label: 'Veteran', desc: '50 Touren gefahren', condition: (p) => p.total_rides >= 50 },
+const MOTO_BADGES = [
+  { type: 'first_ride',  icon: '🏁', label: 'Erste Fahrt',   desc: 'Erste Motorrad-Tour getracked', condition: (p) => p.total_rides >= 1 },
+  { type: 'rides_10',   icon: '🏍️', label: 'Regelmäßig',   desc: '10 Motorrad-Touren gefahren',   condition: (p) => p.total_rides >= 10 },
+  { type: 'rides_50',   icon: '👑',  label: 'Veteran',       desc: '50 Motorrad-Touren gefahren',   condition: (p) => p.total_rides >= 50 },
+  { type: 'speed_100',  icon: '⚡',  label: 'Triple Digits', desc: '100 km/h erreicht',              condition: (p) => p.max_speed >= 100 },
+  { type: 'speed_150',  icon: '🔥',  label: 'Speed Demon',   desc: '150 km/h erreicht',              condition: (p) => p.max_speed >= 150 },
+  { type: 'speed_200',  icon: '💨',  label: '200er Club',    desc: '200 km/h auf dem Motorrad',      condition: (p) => p.max_speed >= 200 },
 ]
+
+const CAR_BADGES = [
+  { type: 'car_first',    icon: '🚗', label: 'Erste Ausfahrt',  desc: 'Erste Auto-Tour getracked',        condition: (p) => p.total_rides >= 1 },
+  { type: 'car_10',       icon: '🏎️', label: 'Car Enthusiast', desc: '10 Auto-Touren gefahren',           condition: (p) => p.total_rides >= 10 },
+  { type: 'car_autobahn', icon: '🛣️', label: 'Autobahnkind',   desc: '200 km/h im Auto erreicht',        condition: (p) => p.max_speed >= 200 },
+  { type: 'car_weekend',  icon: '🌅', label: 'Weekender',       desc: '5 Wochenend-Ausfahrten getracked', condition: (p) => p.total_rides >= 5 },
+]
+
+const GENERAL_BADGES = [
+  { type: 'km_100',   icon: '🛣️', label: '100 km Club',  desc: '100 km gefahren (gesamt)',  condition: (p) => p.total_km >= 100 },
+  { type: 'km_500',   icon: '🗺️', label: '500 km Club',  desc: '500 km gefahren (gesamt)',  condition: (p) => p.total_km >= 500 },
+  { type: 'km_1000',  icon: '🌍', label: '1000 km Club', desc: '1000 km gefahren (gesamt)', condition: (p) => p.total_km >= 1000 },
+  { type: 'km_5000',  icon: '🚀', label: '5000 km Club', desc: '5000 km gefahren (gesamt)', condition: (p) => p.total_km >= 5000 },
+  { type: 'long_100', icon: '🏕️', label: 'Langstrecke',  desc: '100 km am Stück',           condition: (p) => p.longest_ride >= 100 },
+  { type: 'long_300', icon: '🏔️', label: 'Ausdauer',     desc: '300 km am Stück',           condition: (p) => p.longest_ride >= 300 },
+]
+
+const ALL_BADGES = [...MOTO_BADGES, ...CAR_BADGES, ...GENERAL_BADGES]
 
 export default function Profile({ darkMode, setDarkMode }) {
   const t = darkMode ? {
@@ -765,15 +802,14 @@ const toggleFollow = async () => {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Motorrad hinzufügen
+              Fahrzeug hinzufügen
             </button>
 
             {bikes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
-                  <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="9" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
-                </svg>
-                <p style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>Noch kein Motorrad eingetragen</p>
+                <div style={{ fontSize: '48px', margin: '0 auto 12px', display: 'block', lineHeight: 1 }}>🚗🏍️</div>
+                <p style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>Noch kein Fahrzeug eingetragen</p>
+                <p style={{ color: t.muted, fontSize: '11px', fontFamily: "'Barlow', sans-serif", marginTop: '4px' }}>Motorräder, Autos, Quads & mehr</p>
               </div>
             ) : (
               bikes.map(bike => (
@@ -785,7 +821,7 @@ const toggleFollow = async () => {
             )}
 
             {showAddBike && (
-              <AddBikeModal
+              <AddVehicleModal
                 t={t}
                 onClose={() => setShowAddBike(false)}
                 onSaved={() => { setShowAddBike(false); loadProfile() }}
@@ -859,38 +895,50 @@ const toggleFollow = async () => {
               ))}
             </div>
 
-            {/* Abzeichen Grid */}
+            {/* Abzeichen — three sections */}
             <p style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px', fontFamily: "'Barlow', sans-serif" }}>
               ABZEICHEN ({earnedBadges.length}/{ALL_BADGES.length})
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-              {ALL_BADGES.map(badge => {
-                const earned = earnedBadges.includes(badge.type)
-                const unlocked = badge.condition(profile || {})
-                return (
-                  <div key={badge.type} style={{
-                    background: earned ? '#3b82f622' : t.surface,
-                    border: `1px solid ${earned ? '#3b82f6' : t.border}`,
-                    borderRadius: '10px', padding: '12px', textAlign: 'center',
-                    opacity: unlocked || earned ? 1 : 0.4,
-                    transition: 'all 0.2s'
-                  }}>
-                    <p style={{ fontSize: '26px', marginBottom: '6px', filter: !unlocked && !earned ? 'grayscale(1)' : 'none' }}>
-                      {badge.icon}
-                    </p>
-                    <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#3b82f6' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
-                      {badge.label}
-                    </p>
-                    <p style={{ fontSize: '10px', color: t.muted, lineHeight: '1.3' }}>{badge.desc}</p>
-                    {unlocked && !earned && (
-                      <div style={{ marginTop: '6px', background: '#3b82f6', borderRadius: '4px', padding: '3px 6px', fontSize: '9px', color: 'white', fontWeight: '700' }}>
-                        VERDIENT!
+
+            {[
+              { label: '🏍️ Motorrad', badges: MOTO_BADGES },
+              { label: '🚗 Auto', badges: CAR_BADGES },
+              { label: '🌍 Allgemein', badges: GENERAL_BADGES },
+            ].map(section => (
+              <div key={section.label} style={{ marginBottom: '20px' }}>
+                <p style={{ color: t.muted, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontFamily: "'Barlow', sans-serif", display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {section.label}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  {section.badges.map(badge => {
+                    const earned = earnedBadges.includes(badge.type)
+                    const unlocked = badge.condition(profile || {})
+                    return (
+                      <div key={badge.type} style={{
+                        background: earned ? '#3b82f622' : t.surface,
+                        border: `1px solid ${earned ? '#3b82f6' : t.border}`,
+                        borderRadius: '10px', padding: '12px', textAlign: 'center',
+                        opacity: unlocked || earned ? 1 : 0.4,
+                        transition: 'all 0.2s'
+                      }}>
+                        <p style={{ fontSize: '26px', marginBottom: '6px', filter: !unlocked && !earned ? 'grayscale(1)' : 'none' }}>
+                          {badge.icon}
+                        </p>
+                        <p style={{ fontSize: '11px', fontWeight: '700', color: earned ? '#3b82f6' : t.text, fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>
+                          {badge.label}
+                        </p>
+                        <p style={{ fontSize: '10px', color: t.muted, lineHeight: '1.3' }}>{badge.desc}</p>
+                        {unlocked && !earned && (
+                          <div style={{ marginTop: '6px', background: '#3b82f6', borderRadius: '4px', padding: '3px 6px', fontSize: '9px', color: 'white', fontWeight: '700' }}>
+                            VERDIENT!
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
 
             {/* Sicherheitshinweis */}
             <div style={{
@@ -1187,8 +1235,8 @@ function BikeCard({ bike, t, onEdit }) {
 
         {/* Brand + model bottom-left */}
         <div style={{ position: 'absolute', bottom: '14px', left: '16px', right: bike.hp ? '70px' : '16px' }}>
-          <p style={{ color: '#3b82f6', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '3px', fontFamily: "'Barlow', sans-serif" }}>
-            {bike.brand}
+          <p style={{ color: '#3b82f6', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '3px', fontFamily: "'Barlow', sans-serif', display: 'flex', alignItems: 'center', gap: '5px'" }}>
+            {VEHICLE_TYPES.find(v => v.id === bike.vehicle_type)?.emoji || '🏍️'} {bike.brand}
           </p>
           <p style={{ color: 'white', fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', lineHeight: 1 }}>
             {bike.model}
@@ -1379,7 +1427,9 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
           <div>
-            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Motorrad bearbeiten</h3>
+            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>
+            {VEHICLE_TYPES.find(v => v.id === bike.vehicle_type)?.emoji || '🏍️'} Fahrzeug bearbeiten
+          </h3>
             <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>{bike.brand} {bike.model}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
@@ -1501,7 +1551,7 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
           {/* Delete */}
           {!confirmDelete ? (
             <button onClick={() => setConfirmDelete(true)} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid rgba(239,68,68,0.35)`, color: '#ef4444', borderRadius: '12px', fontSize: '13px', fontWeight: 600, fontFamily: "'Barlow', sans-serif", cursor: 'pointer', marginBottom: '8px' }}>
-              Motorrad löschen
+              Fahrzeug löschen
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -1519,9 +1569,10 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
   )
 }
 
-// ── AddBikeModal ──────────────────────────────────────────────────────────────
-function AddBikeModal({ t, onClose, onSaved }) {
+// ── AddVehicleModal ───────────────────────────────────────────────────────────
+function AddVehicleModal({ t, onClose, onSaved }) {
   const CURRENT_YEAR = new Date().getFullYear()
+  const [vehicleType, setVehicleType] = useState('motorrad')
   const [form, setForm] = useState({
     brand: '', customBrand: '', model: '',
     year: String(CURRENT_YEAR),
@@ -1535,7 +1586,12 @@ function AddBikeModal({ t, onClose, onSaved }) {
   const [showBrandList, setShowBrandList] = useState(false)
 
   const effectiveBrand = form.brand === '__other__' ? form.customBrand : form.brand
-  const filteredBrands = BIKE_BRANDS.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
+
+  // Pick the right brand list based on vehicle type
+  const brandListForType = vehicleType === 'quad' ? QUAD_BRANDS
+    : (vehicleType === 'motorrad') ? MOTO_BRANDS
+    : CAR_BRANDS
+  const filteredBrands = brandListForType.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
 
   // Auto-fetch image when brand + model are set
   useEffect(() => {
@@ -1568,12 +1624,19 @@ function AddBikeModal({ t, onClose, onSaved }) {
         torque: form.torque ? parseInt(form.torque) : null,
         weight: form.weight ? parseInt(form.weight) : null,
         odometer: form.odometer ? parseInt(form.odometer) : null,
+        vehicle_type: vehicleType,
       }
       // Try with image_url first; gracefully fall back if column doesn't exist
       let { error: insErr } = await supabase.from('motorcycles').insert({ ...base, image_url: imageUrl || null })
-      if (insErr && /image_url|column/i.test(insErr.message || '')) {
-        const r = await supabase.from('motorcycles').insert(base)
-        if (r.error) throw r.error
+      if (insErr && /image_url|vehicle_type|column/i.test(insErr.message || '')) {
+        // Try without vehicle_type if column is missing
+        const { vehicle_type: _, image_url: __, ...baseMin } = { ...base, image_url: imageUrl || null }
+        const r = await supabase.from('motorcycles').insert(baseMin)
+        if (r.error) {
+          const { image_url: ___, ...baseNoImg } = baseMin
+          const r2 = await supabase.from('motorcycles').insert(baseNoImg)
+          if (r2.error) throw r2.error
+        }
       } else if (insErr) throw insErr
       onSaved()
     } catch (e) {
@@ -1604,11 +1667,25 @@ function AddBikeModal({ t, onClose, onSaved }) {
 
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
-          <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Motorrad hinzufügen</h3>
+          <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Fahrzeug hinzufügen</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+
+          {/* Vehicle type selector */}
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.muted, marginBottom: '8px', fontFamily: "'Barlow', sans-serif" }}>Fahrzeugtyp</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              {VEHICLE_TYPES.map(vt => (
+                <button key={vt.id} onClick={() => { setVehicleType(vt.id); setForm(f => ({ ...f, brand: '', customBrand: '' })); setBrandSearch('') }}
+                  style={{ padding: '10px 6px', background: vehicleType === vt.id ? 'rgba(59,130,246,0.15)' : t.bg, border: `1.5px solid ${vehicleType === vt.id ? '#3b82f6' : t.border}`, borderRadius: '10px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
+                  <div style={{ fontSize: '22px', marginBottom: '3px', lineHeight: 1 }}>{vt.emoji}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: vehicleType === vt.id ? '#3b82f6' : t.muted, fontFamily: "'Barlow', sans-serif" }}>{vt.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Image preview */}
           <div style={{ height: '160px', borderRadius: '14px', overflow: 'hidden', marginBottom: '18px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1734,7 +1811,7 @@ function AddBikeModal({ t, onClose, onSaved }) {
 
           {/* Save button */}
           <button onClick={save} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? t.muted : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", cursor: saving ? 'not-allowed' : 'pointer', boxShadow: saving ? 'none' : '0 4px 15px rgba(59,130,246,0.3)', transition: 'all 0.15s', marginBottom: '8px' }}>
-            {saving ? 'Wird gespeichert…' : 'Motorrad hinzufügen'}
+            {saving ? 'Wird gespeichert…' : `${VEHICLE_TYPES.find(v => v.id === vehicleType)?.emoji || ''} Fahrzeug hinzufügen`}
           </button>
         </div>
       </div>
