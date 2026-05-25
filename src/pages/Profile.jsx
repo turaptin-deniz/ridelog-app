@@ -67,6 +67,8 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [routes, setRoutes] = useState([])
   const [earnedBadges, setEarnedBadges] = useState([])
   const [userPosts, setUserPosts] = useState([])
+  const [userReposts, setUserReposts] = useState([])
+  const [postsSubTab, setPostsSubTab] = useState('fotos')
   const [selectedPost, setSelectedPost] = useState(null)
   const [showAddBike, setShowAddBike] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -90,11 +92,22 @@ export default function Profile({ darkMode, setDarkMode }) {
     const { data: routeData } = await supabase.from('routes').select('*, profiles(username, avatar_url)').eq('user_id', user.id).order('created_at', { ascending: false })
     const { data: badgeData } = await supabase.from('badges').select('*').eq('user_id', user.id)
     const { data: postData } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+
+    // Load reposted posts
+    let repostList = []
+    const { data: repostRows } = await supabase.from('reposts').select('post_id').eq('user_id', user.id)
+    if (repostRows?.length) {
+      const ids = repostRows.map(r => r.post_id)
+      const { data: rPosts } = await supabase.from('posts').select('*, profiles(username, avatar_url)').in('id', ids)
+      repostList = rPosts || []
+    }
+
     setProfile(prof)
     setBikes(bikeData || [])
     setRoutes(routeData || [])
     setEarnedBadges(badgeData?.map(b => b.type) || [])
     setUserPosts(postData || [])
+    setUserReposts(repostList)
     setEditData({ username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '' })
     setLoading(false)
   }
@@ -136,15 +149,28 @@ const toggleFollow = async () => {
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) checkFollow() }, [profile])
 
-  // Refresh posts when a new one is created via the Plus button
+  // Refresh posts + reposts when a new post is created or reposted
   useEffect(() => {
     const refresh = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       const { data } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
       setUserPosts(data || [])
+      // Also refresh reposts
+      const { data: repostRows } = await supabase.from('reposts').select('post_id').eq('user_id', user.id)
+      if (repostRows?.length) {
+        const ids = repostRows.map(r => r.post_id)
+        const { data: rPosts } = await supabase.from('posts').select('*, profiles(username, avatar_url)').in('id', ids)
+        setUserReposts(rPosts || [])
+      } else {
+        setUserReposts([])
+      }
     }
     window.addEventListener('ridelog:post-created', refresh)
-    return () => window.removeEventListener('ridelog:post-created', refresh)
+    window.addEventListener('ridelog:repost-changed', refresh)
+    return () => {
+      window.removeEventListener('ridelog:post-created', refresh)
+      window.removeEventListener('ridelog:repost-changed', refresh)
+    }
   }, [])
 
   const saveProfile = async () => {
@@ -518,55 +544,70 @@ const toggleFollow = async () => {
       {/* Tab Content */}
       <div className="animate-fadeIn">
 
-        {/* Posts */}
+        {/* Posts — with sub-tabs: Fotos / Videos / Reposts */}
         {activeTab === 'posts' && (
           <div>
-            {userPosts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px', display: 'block' }}>
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
-                <p style={{ color: t.muted, fontSize: '14px', marginBottom: '4px', fontFamily: "'Barlow', sans-serif" }}>Noch keine Posts</p>
-                <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>Teile deine erste Tour über den Plus-Button!</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
-                {userPosts.map(post => {
-                  const firstPhoto = post.photos?.[0]
-                  const isVid = firstPhoto && /\.(mp4|mov|webm)/i.test(firstPhoto)
-                  const isMulti = (post.photos?.length || 0) > 1
-                  return (
-                    <div key={post.id} onClick={() => setSelectedPost(post)} style={{ aspectRatio: '1', overflow: 'hidden', cursor: 'pointer', background: t.surface, position: 'relative' }}>
-                      {firstPhoto ? (
-                        isVid
-                          ? <video src={firstPhoto} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          : <img src={firstPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', boxSizing: 'border-box', background: t.surface }}>
-                          <p style={{ fontSize: '10px', color: t.text, lineHeight: 1.4, textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
-                            {post.content}
-                          </p>
-                        </div>
-                      )}
-                      {/* Multi-slide indicator */}
-                      {isMulti && (
-                        <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))' }}>
-                            <rect x="8" y="2" width="13" height="13" rx="2"/><path d="M3 8H2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/>
-                          </svg>
-                        </div>
-                      )}
-                      {/* Video indicator */}
-                      {isVid && !isMulti && (
-                        <div style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '2px 4px', display: 'flex' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+            {/* Sub-tab bar */}
+            <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}` }}>
+              {[
+                { id: 'fotos',   label: 'Fotos'   },
+                { id: 'videos',  label: 'Videos'  },
+                { id: 'reposts', label: 'Reposts' },
+              ].map(sub => (
+                <button key={sub.id} onClick={() => setPostsSubTab(sub.id)} style={{
+                  flex: 1, padding: '10px 6px', background: 'transparent', border: 'none',
+                  borderBottom: postsSubTab === sub.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  color: postsSubTab === sub.id ? '#3b82f6' : t.muted,
+                  cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                  fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s',
+                  letterSpacing: '0.03em'
+                }}>{sub.label}</button>
+              ))}
+            </div>
+
+            {/* Fotos sub-tab: image posts + text-only posts */}
+            {postsSubTab === 'fotos' && (() => {
+              const fotoPosts = userPosts.filter(p =>
+                !p.photos?.some(url => /\.(mp4|mov|webm)/i.test(url))
+              )
+              return fotoPosts.length === 0 ? (
+                <EmptyPostState icon="📸" text="Noch keine Fotos" sub="Teile deine erste Tour über den Plus-Button!" t={t} />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
+                  {fotoPosts.map(post => (
+                    <PostThumb key={post.id} post={post} t={t} onClick={() => setSelectedPost(post)} />
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Videos sub-tab */}
+            {postsSubTab === 'videos' && (() => {
+              const videoPosts = userPosts.filter(p =>
+                p.photos?.some(url => /\.(mp4|mov|webm)/i.test(url))
+              )
+              return videoPosts.length === 0 ? (
+                <EmptyPostState icon="🎬" text="Noch keine Videos" sub="Lade dein erstes Video über den Plus-Button hoch!" t={t} />
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
+                  {videoPosts.map(post => (
+                    <PostThumb key={post.id} post={post} t={t} onClick={() => setSelectedPost(post)} />
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Reposts sub-tab */}
+            {postsSubTab === 'reposts' && (
+              userReposts.length === 0 ? (
+                <EmptyPostState icon="🔁" text="Noch keine Reposts" sub="Reposte Beiträge anderer Fahrer im Feed!" t={t} />
+              ) : (
+                <div>
+                  {userReposts.map(post => (
+                    <RepostCard key={post.id} post={post} t={t} onClick={() => setSelectedPost(post)} />
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}
@@ -787,6 +828,122 @@ const toggleFollow = async () => {
         <RouteDetail row={selectedRoute} currentUser={currentUser} t={t} onClose={() => setSelectedRoute(null)} />
       )}
 
+    </div>
+  )
+}
+
+// ── EmptyPostState ───────────────────────────────────────────────────────────
+function EmptyPostState({ icon, text, sub, t }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <div style={{ fontSize: '40px', marginBottom: '12px' }}>{icon}</div>
+      <p style={{ color: t.muted, fontSize: '14px', marginBottom: '4px', fontFamily: "'Barlow', sans-serif" }}>{text}</p>
+      {sub && <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif" }}>{sub}</p>}
+    </div>
+  )
+}
+
+// ── PostThumb (grid cell) ────────────────────────────────────────────────────
+function PostThumb({ post, t, onClick }) {
+  const firstPhoto = post.photos?.[0]
+  const isVid = firstPhoto && /\.(mp4|mov|webm)/i.test(firstPhoto)
+  const isMulti = (post.photos?.length || 0) > 1
+  return (
+    <div onClick={onClick} style={{ aspectRatio: '1', overflow: 'hidden', cursor: 'pointer', background: t.surface, position: 'relative' }}>
+      {firstPhoto ? (
+        isVid
+          ? <video src={firstPhoto} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <img src={firstPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', boxSizing: 'border-box', background: t.surface }}>
+          <p style={{ fontSize: '10px', color: t.text, lineHeight: 1.4, textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
+            {post.content}
+          </p>
+        </div>
+      )}
+      {isMulti && (
+        <div style={{ position: 'absolute', top: '6px', right: '6px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))' }}>
+            <rect x="8" y="2" width="13" height="13" rx="2"/><path d="M3 8H2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1"/>
+          </svg>
+        </div>
+      )}
+      {isVid && !isMulti && (
+        <div style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', borderRadius: '4px', padding: '2px 4px', display: 'flex' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── RepostCard (Reposts sub-tab) ─────────────────────────────────────────────
+function RepostCard({ post, t, onClick }) {
+  const firstPhoto = post.photos?.[0]
+  const isVid = firstPhoto && /\.(mp4|mov|webm)/i.test(firstPhoto)
+  const isMulti = (post.photos?.length || 0) > 1
+
+  return (
+    <div
+      onClick={onClick}
+      style={{ borderBottom: `1px solid ${t.border}`, cursor: 'pointer', background: t.bg, transition: 'background 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.background = t.surface}
+      onMouseLeave={e => e.currentTarget.style.background = t.bg}
+    >
+      {/* Repost indicator badge */}
+      <div style={{ padding: '8px 16px 0', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.02em' }}>
+          Du hast repostet
+        </span>
+      </div>
+
+      {/* Original post author */}
+      <div style={{ padding: '10px 16px 6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0 }}>
+          {post.profiles?.avatar_url
+            ? <img src={post.profiles.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : post.profiles?.username?.slice(0, 2).toUpperCase() || '??'}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 700, fontSize: '13px', color: t.text, fontFamily: "'Barlow', sans-serif" }}>
+            @{post.profiles?.username || 'unbekannt'}
+          </p>
+        </div>
+        {isMulti && (
+          <span style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '50px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, color: '#3b82f6', fontFamily: "'Barlow', sans-serif" }}>
+            {post.photos.length} Slides
+          </span>
+        )}
+      </div>
+
+      {/* Media preview */}
+      {firstPhoto && (
+        <div style={{ margin: '0 16px', borderRadius: '10px', overflow: 'hidden', marginBottom: '10px', background: '#000', position: 'relative' }}>
+          {isVid
+            ? <video src={firstPhoto} muted playsInline style={{ width: '100%', maxHeight: '240px', objectFit: 'cover', display: 'block' }} />
+            : <img src={firstPhoto} alt="" style={{ width: '100%', maxHeight: '240px', objectFit: 'cover', display: 'block' }} />
+          }
+          {isVid && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.55)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Caption */}
+      {post.content && (
+        <div style={{ padding: '0 16px 12px' }}>
+          <p style={{ fontSize: '13px', color: t.text, lineHeight: 1.5, fontFamily: "'Barlow', sans-serif" }}>
+            <span style={{ fontWeight: 700, color: '#3b82f6', marginRight: '6px' }}>@{post.profiles?.username}</span>
+            {post.content}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

@@ -310,6 +310,8 @@ export default function Feed({ darkMode }) {
     setPosts(posts.map(p => p.id === post.id ? {
       ...p, reposted: !p.reposted, repost_count: p.repost_count + (p.reposted ? -1 : 1)
     } : p))
+    // Notify Profile page so the Reposts tab refreshes
+    window.dispatchEvent(new CustomEvent('ridelog:repost-changed'))
   }
 
   const openComments = async (post) => {
