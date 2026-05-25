@@ -549,56 +549,64 @@ const toggleFollow = async () => {
           <div>
             {/* Sub-tab bar — icons only */}
             <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}` }}>
-              {/* Fotos */}
-              <button onClick={() => setPostsSubTab('fotos')} style={{
-                flex: 1, padding: '12px 6px', background: 'transparent', border: 'none',
-                borderBottom: postsSubTab === 'fotos' ? '2px solid #3b82f6' : '2px solid transparent',
-                color: postsSubTab === 'fotos' ? '#3b82f6' : t.muted,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-              </button>
-
-              {/* Videos */}
-              <button onClick={() => setPostsSubTab('videos')} style={{
-                flex: 1, padding: '12px 6px', background: 'transparent', border: 'none',
-                borderBottom: postsSubTab === 'videos' ? '2px solid #3b82f6' : '2px solid transparent',
-                color: postsSubTab === 'videos' ? '#3b82f6' : t.muted,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7"/>
-                  <rect x="1" y="5" width="15" height="14" rx="2"/>
-                </svg>
-              </button>
-
-              {/* Reposts */}
-              <button onClick={() => setPostsSubTab('reposts')} style={{
-                flex: 1, padding: '12px 6px', background: 'transparent', border: 'none',
-                borderBottom: postsSubTab === 'reposts' ? '2px solid #3b82f6' : '2px solid transparent',
-                color: postsSubTab === 'reposts' ? '#3b82f6' : t.muted,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s'
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="17 1 21 5 17 9"/>
-                  <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                  <polyline points="7 23 3 19 7 15"/>
-                  <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                </svg>
-              </button>
+              {[
+                {
+                  id: 'fotos',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                  )
+                },
+                {
+                  id: 'videos',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="23 7 16 12 23 17 23 7"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2"/>
+                    </svg>
+                  )
+                },
+                {
+                  id: 'text',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="4" y1="6" x2="20" y2="6"/>
+                      <line x1="4" y1="10" x2="20" y2="10"/>
+                      <line x1="4" y1="14" x2="14" y2="14"/>
+                    </svg>
+                  )
+                },
+                {
+                  id: 'reposts',
+                  icon: (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="17 1 21 5 17 9"/>
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <polyline points="7 23 3 19 7 15"/>
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                  )
+                },
+              ].map(sub => (
+                <button key={sub.id} onClick={() => setPostsSubTab(sub.id)} style={{
+                  flex: 1, padding: '12px 6px', background: 'transparent', border: 'none',
+                  borderBottom: postsSubTab === sub.id ? '2px solid #3b82f6' : '2px solid transparent',
+                  color: postsSubTab === sub.id ? '#3b82f6' : t.muted,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s'
+                }}>
+                  {sub.icon}
+                </button>
+              ))}
             </div>
 
-            {/* Fotos sub-tab: image posts + text-only posts */}
+            {/* Fotos sub-tab: only posts with at least one image */}
             {postsSubTab === 'fotos' && (() => {
               const fotoPosts = userPosts.filter(p =>
-                !p.photos?.some(url => /\.(mp4|mov|webm)/i.test(url))
+                p.photos?.some(url => !/\.(mp4|mov|webm)/i.test(url))
               )
               return fotoPosts.length === 0 ? (
                 <EmptyPostState icon="📸" text="Noch keine Fotos" sub="Teile deine erste Tour über den Plus-Button!" t={t} />
@@ -622,6 +630,41 @@ const toggleFollow = async () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px' }}>
                   {videoPosts.map(post => (
                     <PostThumb key={post.id} post={post} t={t} onClick={() => setSelectedPost(post)} />
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Text sub-tab: posts with no media at all */}
+            {postsSubTab === 'text' && (() => {
+              const textPosts = userPosts.filter(p => !p.photos?.length)
+              return textPosts.length === 0 ? (
+                <EmptyPostState icon="✍️" text="Noch keine Textbeiträge" sub="Erstelle deinen ersten reinen Textpost!" t={t} />
+              ) : (
+                <div>
+                  {textPosts.map(post => (
+                    <div
+                      key={post.id}
+                      onClick={() => setSelectedPost(post)}
+                      style={{
+                        padding: '16px', borderBottom: `1px solid ${t.border}`,
+                        cursor: 'pointer', background: t.bg, transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = t.surface}
+                      onMouseLeave={e => e.currentTarget.style.background = t.bg}
+                    >
+                      <p style={{
+                        fontSize: '15px', lineHeight: 1.6, color: t.text,
+                        fontFamily: "'Barlow', sans-serif",
+                        display: '-webkit-box', WebkitLineClamp: 4,
+                        WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {post.content}
+                      </p>
+                      <p style={{ fontSize: '11px', color: t.muted, marginTop: '8px', fontFamily: "'Barlow', sans-serif" }}>
+                        {new Date(post.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
                   ))}
                 </div>
               )
