@@ -508,6 +508,27 @@ label {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Live-ride sonar ping — used on the center map button */
+@keyframes livePing {
+  0%   { transform: scale(1);   opacity: 0.65; }
+  80%  { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+.live-ring {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.38);
+  animation: livePing 1.6s ease-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.live-ring-2 {
+  animation-delay: 0.65s;
+}
+
 /* ====================================================================
    RESPONSIVE UTILITIES
    ==================================================================== */

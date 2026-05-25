@@ -22,7 +22,7 @@ const VEHICLE_FILTERS = [
   { id: 'quads', label: 'Quads & ATVs',    emoji: '🚜' },
 ]
 
-export default function CreateMenu({ open, onClose, onCreated, lang }) {
+export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = false }) {
   const [view, setView] = useState('menu')
   const [error, setError] = useState('')
 
@@ -56,7 +56,7 @@ export default function CreateMenu({ open, onClose, onCreated, lang }) {
     }
   }, [open])
 
-  if (!open) return null
+  if (!open && !pageMode) return null
 
   const close = () => {
     setSlides([])
@@ -66,7 +66,7 @@ export default function CreateMenu({ open, onClose, onCreated, lang }) {
     setStops([newStop()])
     setError('')
     setView('menu')
-    onClose()
+    if (!pageMode) onClose()
   }
 
   const addFiles = async (fileList) => {
@@ -246,28 +246,29 @@ export default function CreateMenu({ open, onClose, onCreated, lang }) {
 
   const cur = slides[activeSlide]
 
-  return (
-    <div onClick={close} style={backdrop} className="animate-fadeIn">
-      <div onClick={e => e.stopPropagation()} style={sheet} className="animate-scaleIn">
-
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            {view !== 'menu' && (
-              <button onClick={() => { setView('menu'); setError('') }} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-                </svg>
-              </button>
-            )}
-            <h3 style={{ fontFamily: 'var(--font-family-condensed)', fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-              {view === 'menu' && 'Erstellen'}
-              {view === 'post' && 'Neuer Post'}
-              {view === 'meetup' && 'Event planen'}
-            </h3>
-          </div>
-          <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>×</button>
+  // ── Shared inner content (header + error + view forms) ──────────────────
+  const innerContent = (
+    <>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          {view !== 'menu' && (
+            <button onClick={() => { setView('menu'); setError('') }} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </button>
+          )}
+          <h3 style={{ fontFamily: 'var(--font-family-condensed)', fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+            {view === 'menu' && 'Erstellen'}
+            {view === 'post' && 'Neuer Post'}
+            {view === 'meetup' && 'Event planen'}
+          </h3>
         </div>
+        {!pageMode && (
+          <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>×</button>
+        )}
+      </div>
 
         {/* Error */}
         {error && (
@@ -456,6 +457,23 @@ export default function CreateMenu({ open, onClose, onCreated, lang }) {
             <PrimaryButton onClick={createMeetup} disabled={creatingMeetup} label={creatingMeetup ? 'Wird erstellt…' : 'Event erstellen'} />
           </div>
         )}
+    </>
+  )
+
+  // ── Page mode: render as a scrollable full page ─────────────────────────
+  if (pageMode) {
+    return (
+      <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-5)' }} className="animate-fadeIn">
+        {innerContent}
+      </div>
+    )
+  }
+
+  // ── Modal mode: render as a centered overlay ─────────────────────────────
+  return (
+    <div onClick={close} style={backdrop} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={sheet} className="animate-scaleIn">
+        {innerContent}
       </div>
     </div>
   )

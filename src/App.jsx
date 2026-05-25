@@ -23,7 +23,7 @@ function App() {
   const [selectedLanguage, setSelectedLanguage] = useState('de')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
-  const [showCreate, setShowCreate] = useState(false)
+  // showCreate removed — create functionality lives in the 'erstellen' tab
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('revmeet-fontsize') || 'md')
 
   // ── Ride tracking (lifted so it persists across tab navigation) ───────────
@@ -271,6 +271,17 @@ function App() {
             {...rideProps}
           />
         )
+      case 'erstellen':
+        return (
+          <CreateMenu
+            pageMode
+            lang={selectedLanguage}
+            onCreated={(kind) => {
+              if (kind === 'post') setActivePage('feed')
+              if (kind === 'meetup') setActivePage('map')
+            }}
+          />
+        )
       case 'feed':
         return <Feed darkMode={darkMode} lang={selectedLanguage} />
       case 'messages':
@@ -294,12 +305,12 @@ function App() {
   // ── Nav items ─────────────────────────────────────────────────────────────
   const NAV_LEFT = [
     {
-      id: 'map',
-      label: T('nav_map'),
+      id: 'erstellen',
+      label: 'Erstellen',
       icon: (active) => (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-          <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+          <path d="M12 20h9"/>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
         </svg>
       ),
     },
@@ -356,17 +367,6 @@ function App() {
             position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
             width: '24px', height: '2px', background: t.accent, borderRadius: '0 0 2px 2px',
           }} />
-        )}
-
-        {/* Live ride pulsing dot on Karte tab */}
-        {item.id === 'map' && isLive && (
-          <div style={{
-            position: 'absolute', top: '7px', right: 'calc(50% - 19px)',
-            width: '8px', height: '8px', borderRadius: '50%',
-            background: '#f43f5e',
-            boxShadow: '0 0 0 2px rgba(244,63,94,0.25)',
-            zIndex: 10,
-          }} className="animate-pulse" />
         )}
 
         {item.icon(isActive)}
@@ -495,49 +495,54 @@ function App() {
         }}>
           {NAV_LEFT.map(item => <NavBtn key={item.id} item={item} />)}
 
-          {/* Center Plus button */}
+          {/* Center Map button — tire icon, pulses green when ride is live */}
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', zIndex: 1600 }}>
-            <button
-              onClick={() => setShowCreate(true)}
-              style={{
-                width: '52px', height: '52px',
-                background: `linear-gradient(135deg, ${t.accent} 0%, #2563eb 100%)`,
-                border: 'none', borderRadius: '50%', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(59,130,246,0.45)',
-                transform: 'translateY(-12px)',
-                transition: 'transform var(--transition-fast), box-shadow var(--transition-fast)',
-                position: 'relative', zIndex: 1700,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-14px) scale(1.05)'
-                e.currentTarget.style.boxShadow = '0 6px 22px rgba(59,130,246,0.6)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(-12px) scale(1)'
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(59,130,246,0.45)'
-              }}
-            >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
+            {/* Wrapper lifts both rings + button together */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(-12px)', zIndex: 1700 }}>
+              {/* Sonar rings when live */}
+              {isLive && (
+                <>
+                  <div className="live-ring" />
+                  <div className="live-ring live-ring-2" />
+                </>
+              )}
+              <button
+                onClick={() => { setActivePage('map'); setSearchQuery('') }}
+                style={{
+                  width: '52px', height: '52px',
+                  background: isLive
+                    ? 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)'
+                    : `linear-gradient(135deg, ${t.accent} 0%, #2563eb 100%)`,
+                  border: 'none', borderRadius: '50%', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: isLive
+                    ? '0 4px 20px rgba(74,222,128,0.55)'
+                    : '0 4px 16px rgba(59,130,246,0.45)',
+                  transition: 'background 0.4s, box-shadow 0.4s, transform var(--transition-fast)',
+                  position: 'relative', zIndex: 1,
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                {/* Tire / wheel icon — 6 spokes */}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2"/>
+                  <circle cx="12" cy="12" r="2.5" fill="white"/>
+                  <line x1="12" y1="3"    x2="12"   y2="8.5"  stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="19.8" y1="7.5" x2="15"  y2="10.3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="19.8" y1="16.5" x2="15" y2="13.7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="12" y1="21"   x2="12"   y2="15.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="4.2" y1="16.5" x2="9"   y2="13.7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="4.2" y1="7.5"  x2="9"   y2="10.3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           {NAV_RIGHT.map(item => <NavBtn key={item.id} item={item} />)}
         </div>
 
-        {/* ── Create menu ──────────────────────────────────────────────────── */}
-        <CreateMenu
-          open={showCreate}
-          onClose={() => setShowCreate(false)}
-          lang={selectedLanguage}
-          onCreated={(kind) => {
-            if (kind === 'post') setActivePage('feed')
-            if (kind === 'meetup') setActivePage('map')
-          }}
-        />
+        {/* CreateMenu is now rendered as a full page via the 'erstellen' tab */}
 
         {/* ── Settings modal ───────────────────────────────────────────────── */}
         {showSettings && (
