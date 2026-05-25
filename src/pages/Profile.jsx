@@ -1317,9 +1317,9 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
         if (!p.file) return p.url   // already a remote URL
         const ext = p.file.name.split('.').pop()
         const path = `${user.id}/${bike.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`
-        const { error: upErr } = await supabase.storage.from('bike-photos').upload(path, p.file, { upsert: true })
+        const { error: upErr } = await supabase.storage.from('post-images').upload(path, p.file, { upsert: true })
         if (upErr) throw upErr
-        const { data: urlData } = supabase.storage.from('bike-photos').getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
         return urlData.publicUrl
       }))
 
@@ -1373,8 +1373,8 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
   const focusOff = e => e.target.style.borderColor = t.border
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} className="animate-fadeIn">
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px 20px 0 0', maxHeight: '93vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-scaleIn">
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-scaleIn">
 
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
