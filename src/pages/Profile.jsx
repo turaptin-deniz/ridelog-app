@@ -71,6 +71,7 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [postsSubTab, setPostsSubTab] = useState('fotos')
   const [selectedPost, setSelectedPost] = useState(null)
   const [showAddBike, setShowAddBike] = useState(false)
+  const [editingBike, setEditingBike] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
@@ -775,7 +776,12 @@ const toggleFollow = async () => {
                 <p style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>Noch kein Motorrad eingetragen</p>
               </div>
             ) : (
-              bikes.map(bike => <BikeCard key={bike.id} bike={bike} t={t} />)
+              bikes.map(bike => (
+                <BikeCard
+                  key={bike.id} bike={bike} t={t}
+                  onEdit={() => setEditingBike(bike)}
+                />
+              ))
             )}
 
             {showAddBike && (
@@ -783,6 +789,15 @@ const toggleFollow = async () => {
                 t={t}
                 onClose={() => setShowAddBike(false)}
                 onSaved={() => { setShowAddBike(false); loadProfile() }}
+              />
+            )}
+
+            {editingBike && (
+              <EditBikeModal
+                t={t}
+                bike={editingBike}
+                onClose={() => setEditingBike(null)}
+                onSaved={() => { setEditingBike(null); loadProfile() }}
               />
             )}
           </div>
@@ -1117,7 +1132,16 @@ function PostDetailModal({ post, profile, t, onClose }) {
 }
 
 // ── BikeCard ─────────────────────────────────────────────────────────────────
-function BikeCard({ bike, t }) {
+function BikeCard({ bike, t, onEdit }) {
+  const [slideIdx, setSlideIdx] = useState(0)
+
+  // User-uploaded photos take priority; fall back to Wikipedia image
+  const photos = bike.user_photos?.length
+    ? bike.user_photos
+    : bike.image_url ? [bike.image_url] : []
+
+  const isVid = url => url && /\.(mp4|mov|webm)/i.test(url)
+
   const specs = [
     { label: 'CC', value: bike.cc },
     { label: 'NM', value: bike.torque },
@@ -1126,18 +1150,40 @@ function BikeCard({ bike, t }) {
 
   return (
     <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', border: `1px solid ${t.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-      {/* Image / gradient header */}
-      <div style={{ height: '180px', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-        {bike.image_url && (
-          <img
-            src={bike.image_url}
-            alt={`${bike.brand} ${bike.model}`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            onError={e => { e.target.style.display = 'none' }}
-          />
+
+      {/* Image header — carousel if multiple photos */}
+      <div style={{ height: '200px', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+
+        {/* Current slide */}
+        {photos.length > 0 && (
+          isVid(photos[slideIdx])
+            ? <video src={photos[slideIdx]} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <img src={photos[slideIdx]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
         )}
+
         {/* Dark gradient for text readability */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.72) 100%)' }} />
+
+        {/* Prev / Next arrows */}
+        {photos.length > 1 && slideIdx > 0 && (
+          <button onClick={e => { e.stopPropagation(); setSlideIdx(i => i - 1) }} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        )}
+        {photos.length > 1 && slideIdx < photos.length - 1 && (
+          <button onClick={e => { e.stopPropagation(); setSlideIdx(i => i + 1) }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        )}
+
+        {/* Dots */}
+        {photos.length > 1 && (
+          <div style={{ position: 'absolute', bottom: '44px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
+            {photos.map((_, i) => (
+              <div key={i} onClick={() => setSlideIdx(i)} style={{ height: '5px', width: i === slideIdx ? '16px' : '5px', borderRadius: '3px', background: i === slideIdx ? 'white' : 'rgba(255,255,255,0.4)', transition: 'width 0.2s ease', cursor: 'pointer' }} />
+            ))}
+          </div>
+        )}
 
         {/* Brand + model bottom-left */}
         <div style={{ position: 'absolute', bottom: '14px', left: '16px', right: bike.hp ? '70px' : '16px' }}>
@@ -1155,6 +1201,25 @@ function BikeCard({ bike, t }) {
           <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(59,130,246,0.85)', borderRadius: '10px', padding: '8px 12px', textAlign: 'center', backdropFilter: 'blur(6px)', border: '1px solid rgba(59,130,246,0.4)' }}>
             <p style={{ color: 'white', fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{bike.hp}</p>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', marginTop: '1px' }}>PS</p>
+          </div>
+        )}
+
+        {/* Edit button top-left */}
+        <button
+          onClick={onEdit}
+          style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', backdropFilter: 'blur(4px)', fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Bearbeiten
+        </button>
+
+        {/* Own photo badge */}
+        {bike.user_photos?.length > 0 && (
+          <div style={{ position: 'absolute', bottom: bike.hp ? '50px' : '14px', right: '12px', background: 'rgba(16,185,129,0.85)', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', fontWeight: 700, color: 'white', fontFamily: "'Barlow', sans-serif", backdropFilter: 'blur(4px)' }}>
+            {bike.user_photos.length} {bike.user_photos.length === 1 ? 'Foto' : 'Fotos'}
           </div>
         )}
       </div>
@@ -1181,6 +1246,274 @@ function BikeCard({ bike, t }) {
             </span>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── EditBikeModal ─────────────────────────────────────────────────────────────
+function EditBikeModal({ t, bike, onClose, onSaved }) {
+  const CURRENT_YEAR = new Date().getFullYear()
+  const [form, setForm] = useState({
+    brand: bike.brand || '',
+    model: bike.model || '',
+    year: String(bike.year || ''),
+    hp: String(bike.hp || ''),
+    cc: String(bike.cc || ''),
+    torque: String(bike.torque || ''),
+    weight: String(bike.weight || ''),
+    odometer: String(bike.odometer || ''),
+  })
+
+  // photos: array of { url: string, file: File|null }
+  // url = existing public URL or blob preview for newly added files
+  const [photos, setPhotos] = useState(
+    (bike.user_photos || []).map(url => ({ url, file: null }))
+  )
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const fileInputRef = useRef()
+  const pendingSlotRef = useRef(null)
+
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  const openPicker = (slotIdx) => {
+    pendingSlotRef.current = slotIdx
+    fileInputRef.current.click()
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+    const url = URL.createObjectURL(file)
+    const slot = pendingSlotRef.current
+    setPhotos(prev => {
+      const next = [...prev]
+      if (slot !== null && slot < next.length) {
+        next[slot] = { url, file }          // replace existing slot
+      } else {
+        next.push({ url, file })            // add new
+      }
+      return next
+    })
+  }
+
+  const removePhoto = (idx) => {
+    setPhotos(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const save = async () => {
+    setError('')
+    if (!form.brand || !form.model.trim()) { setError('Marke und Modell sind Pflichtfelder.'); return }
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // Upload new files, keep existing URLs
+      const uploadedUrls = await Promise.all(photos.map(async (p) => {
+        if (!p.file) return p.url   // already a remote URL
+        const ext = p.file.name.split('.').pop()
+        const path = `${user.id}/${bike.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('bike-photos').upload(path, p.file, { upsert: true })
+        if (upErr) throw upErr
+        const { data: urlData } = supabase.storage.from('bike-photos').getPublicUrl(path)
+        return urlData.publicUrl
+      }))
+
+      const base = {
+        brand: form.brand,
+        model: form.model.trim(),
+        year: form.year ? parseInt(form.year) : null,
+        hp: form.hp ? parseFloat(form.hp) : null,
+        cc: form.cc ? parseInt(form.cc) : null,
+        torque: form.torque ? parseInt(form.torque) : null,
+        weight: form.weight ? parseInt(form.weight) : null,
+        odometer: form.odometer ? parseInt(form.odometer) : null,
+        user_photos: uploadedUrls,
+      }
+
+      let { error: updErr } = await supabase.from('motorcycles').update(base).eq('id', bike.id)
+      if (updErr && /user_photos|column/i.test(updErr.message || '')) {
+        // Column missing → retry without user_photos
+        const { user_photos: _, ...baseWithout } = base
+        const r = await supabase.from('motorcycles').update(baseWithout).eq('id', bike.id)
+        if (r.error) throw r.error
+      } else if (updErr) throw updErr
+
+      onSaved()
+    } catch (e) {
+      setError(e.message || 'Fehler beim Speichern.')
+      setSaving(false)
+    }
+  }
+
+  const deleteBike = async () => {
+    setDeleting(true)
+    await supabase.from('motorcycles').delete().eq('id', bike.id)
+    onSaved()
+  }
+
+  const inputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    background: t.bg, border: `1px solid ${t.border}`,
+    borderRadius: '10px', padding: '11px 14px',
+    color: t.text, fontSize: '15px',
+    fontFamily: "'Barlow', sans-serif",
+    outline: 'none', transition: 'border-color 0.15s'
+  }
+  const labelStyle = {
+    display: 'block', fontSize: '10px', fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+    color: t.muted, marginBottom: '5px', fontFamily: "'Barlow', sans-serif"
+  }
+  const focusOn = e => e.target.style.borderColor = '#3b82f6'
+  const focusOff = e => e.target.style.borderColor = t.border
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px 20px 0 0', maxHeight: '93vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-scaleIn">
+
+        {/* Header */}
+        <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+          <div>
+            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Motorrad bearbeiten</h3>
+            <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>{bike.brand} {bike.model}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+
+          {/* ── Photo slots (up to 3) ── */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Eigene Fotos (max. 3)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              {[0, 1, 2].map(slot => {
+                const photo = photos[slot]
+                return (
+                  <div key={slot} style={{ aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', position: 'relative', background: t.bg, border: `1.5px dashed ${photo ? 'transparent' : t.border}`, cursor: photo ? 'default' : 'pointer' }}
+                    onClick={() => !photo && openPicker(slot)}
+                  >
+                    {photo ? (
+                      <>
+                        <img src={photo.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
+                        {/* Replace button */}
+                        <button onClick={() => openPicker(slot)} style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.65)', border: 'none', color: 'white', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        {/* Remove button */}
+                        <button onClick={() => removePhoto(slot)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,0.85)', border: 'none', color: 'white', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                        {/* Slot number */}
+                        <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(0,0,0,0.55)', borderRadius: '4px', padding: '2px 5px', fontSize: '9px', fontWeight: 700, color: 'white', fontFamily: "'Barlow', sans-serif" }}>{slot + 1}</div>
+                      </>
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', opacity: 0.5 }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2"/>
+                          <circle cx="8.5" cy="8.5" r="1.5"/>
+                          <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span style={{ fontSize: '10px', color: t.muted, fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>Foto {slot + 1}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p style={{ fontSize: '10px', color: t.muted, marginTop: '6px', fontFamily: "'Barlow', sans-serif" }}>
+              Tippe auf ein leeres Feld oder das Stift-Symbol zum Ersetzen
+            </p>
+          </div>
+
+          {/* Hidden file input */}
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+
+          {/* Error */}
+          {error && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '14px', fontFamily: "'Barlow', sans-serif" }}>
+              {error}
+            </div>
+          )}
+
+          {/* Brand (read-only display — brand shouldn't change for an existing entry) */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Marke</label>
+            <input value={form.brand} onChange={e => set('brand', e.target.value)} style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+          </div>
+
+          {/* Model */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>Modell *</label>
+            <input value={form.model} onChange={e => set('model', e.target.value)} style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+          </div>
+
+          {/* Year + HP */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Baujahr</label>
+              <input type="number" value={form.year} onChange={e => set('year', e.target.value)} min="1900" max={CURRENT_YEAR + 1} style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>PS (Leistung)</label>
+              <input type="number" value={form.hp} onChange={e => set('hp', e.target.value)} min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* CC + NM */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={labelStyle}>Hubraum (CC)</label>
+              <input type="number" value={form.cc} onChange={e => set('cc', e.target.value)} min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>Drehmoment (NM)</label>
+              <input type="number" value={form.torque} onChange={e => set('torque', e.target.value)} min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* Weight + Odometer */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+            <div>
+              <label style={labelStyle}>Gewicht (KG)</label>
+              <input type="number" value={form.weight} onChange={e => set('weight', e.target.value)} min="1" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+            <div>
+              <label style={labelStyle}>Kilometerstand</label>
+              <input type="number" value={form.odometer} onChange={e => set('odometer', e.target.value)} min="0" style={inputStyle} onFocus={focusOn} onBlur={focusOff} />
+            </div>
+          </div>
+
+          {/* Save */}
+          <button onClick={save} disabled={saving} style={{ width: '100%', padding: '14px', background: saving ? t.muted : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", cursor: saving ? 'not-allowed' : 'pointer', boxShadow: saving ? 'none' : '0 4px 15px rgba(59,130,246,0.3)', transition: 'all 0.15s', marginBottom: '10px' }}>
+            {saving ? 'Wird gespeichert…' : 'Änderungen speichern'}
+          </button>
+
+          {/* Delete */}
+          {!confirmDelete ? (
+            <button onClick={() => setConfirmDelete(true)} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid rgba(239,68,68,0.35)`, color: '#ef4444', borderRadius: '12px', fontSize: '13px', fontWeight: 600, fontFamily: "'Barlow', sans-serif", cursor: 'pointer', marginBottom: '8px' }}>
+              Motorrad löschen
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '12px', background: 'transparent', border: `1px solid ${t.border}`, color: t.muted, borderRadius: '12px', fontSize: '13px', fontWeight: 600, fontFamily: "'Barlow', sans-serif", cursor: 'pointer' }}>
+                Abbrechen
+              </button>
+              <button onClick={deleteBike} disabled={deleting} style={{ flex: 1, padding: '12px', background: '#ef4444', border: 'none', color: 'white', borderRadius: '12px', fontSize: '13px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                {deleting ? 'Löschen…' : 'Ja, löschen'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
