@@ -45,29 +45,7 @@ function CenterMap({ position }) {
   return null
 }
 
-function LiveDisplay({ speed, distance }) {
-  const [showKm, setShowKm] = useState(false)
-
-  useEffect(() => {
-    const interval = setInterval(() => setShowKm(prev => !prev), 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <div style={{ textAlign: 'center', position: 'relative', height: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ transition: 'opacity 0.5s', opacity: showKm ? 0 : 1, position: showKm ? 'absolute' : 'relative' }}>
-        <p style={{ color: '#555', fontSize: '10px', fontWeight: '700', letterSpacing: '0.15em', fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>GESCHWINDIGKEIT</p>
-        <p style={{ color: 'white', fontSize: '64px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{speed}</p>
-        <p style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM/H</p>
-      </div>
-      <div style={{ transition: 'opacity 0.5s', opacity: showKm ? 1 : 0, position: showKm ? 'relative' : 'absolute' }}>
-        <p style={{ color: '#555', fontSize: '10px', fontWeight: '700', letterSpacing: '0.15em', fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>GEFAHRENE KILOMETER</p>
-        <p style={{ color: 'white', fontSize: '64px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{distance.toFixed(1)}</p>
-        <p style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.1em' }}>KM</p>
-      </div>
-    </div>
-  )
-}
+// LiveDisplay is now inlined in the stats bar — component removed
 
 export default function Map({ darkMode, onSelectRider }) {
   const t = darkMode ? {
@@ -371,26 +349,55 @@ export default function Map({ darkMode, onSelectRider }) {
       {/* Live Stats Bar */}
       {isLive && (
         <div style={{
-          background: 'rgba(10,10,10,0.95)',
-          backdropFilter: 'blur(12px)',
-          borderTop: '1px solid #1f1f1f',
-          padding: '16px', flexShrink: 0
+          background: t.surface,
+          borderTop: `2px solid ${getSpeedColor(speed)}`,
+          padding: '12px 16px 14px',
+          flexShrink: 0,
         }}>
-          <LiveDisplay speed={speed} distance={distance} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginTop: '12px' }}>
+          {/* REC badge + speed gauge row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+
+            {/* REC badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.35)', borderRadius: '20px', padding: '4px 10px', flexShrink: 0 }}>
+              <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f43f5e' }} className="animate-pulse" />
+              <span style={{ color: '#f43f5e', fontSize: '10px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", letterSpacing: '0.06em' }}>REC</span>
+            </div>
+
+            {/* Big speed — centered, grows to fill space */}
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <span style={{
+                color: getSpeedColor(speed),
+                fontSize: '52px', fontWeight: 700,
+                fontFamily: "'Barlow Condensed', sans-serif",
+                lineHeight: 1, letterSpacing: '-1px'
+              }}>{speed}</span>
+              <span style={{ color: t.muted, fontSize: '13px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", marginLeft: '5px', letterSpacing: '0.06em' }}>km/h</span>
+            </div>
+
+            {/* Time — right side */}
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <p style={{ color: t.muted, fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '2px' }}>ZEIT</p>
+              <p style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{formatTime(rideTime)}</p>
+            </div>
+          </div>
+
+          {/* 3 stat tiles */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
             {[
-              { label: 'MAX', value: maxSpeed, unit: 'km/h' },
-              { label: 'DURCHSCHN.', value: avgSpeed, unit: 'km/h' },
-              { label: 'STRECKE', value: distance.toFixed(1), unit: 'km' },
-              { label: 'ZEIT', value: formatTime(rideTime), unit: '' },
+              { label: 'MAX TEMPO', value: maxSpeed, unit: 'km/h', color: '#f43f5e' },
+              { label: 'DURCHSCHN.', value: avgSpeed, unit: 'km/h', color: '#facc15' },
+              { label: 'STRECKE', value: distance.toFixed(1), unit: 'km', color: '#4ade80' },
             ].map(stat => (
               <div key={stat.label} style={{
-                background: '#1a1a1a', borderRadius: '8px', padding: '10px 6px',
-                textAlign: 'center', border: '1px solid #2a2a2a'
+                background: t.bg,
+                borderRadius: '10px',
+                padding: '10px 8px',
+                textAlign: 'center',
+                border: `1px solid ${t.border}`,
               }}>
-                <p style={{ color: '#555', fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '4px' }}>{stat.label}</p>
-                <p style={{ color: 'white', fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
-                {stat.unit && <p style={{ color: '#3b82f6', fontSize: '9px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginTop: '2px' }}>{stat.unit}</p>}
+                <p style={{ color: t.muted, fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em', fontFamily: "'Barlow', sans-serif", marginBottom: '4px', textTransform: 'uppercase' }}>{stat.label}</p>
+                <p style={{ color: t.text, fontSize: '20px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
+                <p style={{ color: stat.color, fontSize: '9px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", marginTop: '3px', letterSpacing: '0.06em' }}>{stat.unit}</p>
               </div>
             ))}
           </div>
@@ -448,38 +455,51 @@ export default function Map({ darkMode, onSelectRider }) {
 
       {/* Post-Ride Stats Modal */}
       {showStats && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}
           className="animate-fadeIn">
-          <div style={{ background: '#111', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '400px' }}
+          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: '20px', padding: '24px', width: '100%', maxWidth: '400px' }}
             className="animate-scaleIn">
-            <h3 style={{ color: 'white', fontSize: '24px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", marginBottom: '4px', letterSpacing: '0.5px' }}>
-              TOUR ABGESCHLOSSEN 🏁
-            </h3>
-            <p style={{ color: '#555', fontSize: '13px', marginBottom: '24px' }}>Deine Statistiken</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🏁</div>
+              <div>
+                <h3 style={{ color: t.text, fontSize: '20px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', margin: 0 }}>TOUR ABGESCHLOSSEN</h3>
+                <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>Deine Statistiken</p>
+              </div>
+            </div>
+
+            {/* Stats grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
               {[
-                { label: 'Strecke', value: `${distance.toFixed(1)} km`, icon: '🛣️' },
-                { label: 'Fahrzeit', value: formatTime(rideTime), icon: '⏱️' },
-                { label: 'Max. Tempo', value: `${maxSpeed} km/h`, icon: '⚡' },
-                { label: 'Ø Tempo', value: `${avgSpeed} km/h`, icon: '📊' },
+                { label: 'Strecke', value: `${distance.toFixed(1)}`, unit: 'km', icon: '🛣️', color: '#4ade80' },
+                { label: 'Fahrzeit', value: formatTime(rideTime), unit: '', icon: '⏱️', color: '#3b82f6' },
+                { label: 'Max. Tempo', value: `${maxSpeed}`, unit: 'km/h', icon: '⚡', color: '#f43f5e' },
+                { label: 'Ø Tempo', value: `${avgSpeed}`, unit: 'km/h', icon: '📊', color: '#facc15' },
               ].map(stat => (
-                <div key={stat.label} style={{ background: '#1a1a1a', borderRadius: '10px', padding: '14px' }}>
-                  <p style={{ fontSize: '22px', marginBottom: '6px' }}>{stat.icon}</p>
-                  <p style={{ color: '#3b82f6', fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>{stat.value}</p>
-                  <p style={{ color: '#555', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</p>
+                <div key={stat.label} style={{ background: t.bg, borderRadius: '12px', padding: '14px', border: `1px solid ${t.border}` }}>
+                  <p style={{ fontSize: '18px', marginBottom: '6px' }}>{stat.icon}</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <p style={{ color: stat.color, fontSize: '24px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>{stat.value}</p>
+                    {stat.unit && <p style={{ color: t.muted, fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}>{stat.unit}</p>}
+                  </div>
+                  <p style={{ color: t.muted, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Barlow', sans-serif", marginTop: '3px' }}>{stat.label}</p>
                 </div>
               ))}
             </div>
+
+            {/* Actions */}
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowStats(false)} className="btn-press" style={{
-                flex: 1, background: 'transparent', border: '1px solid #333',
-                color: '#888', borderRadius: '8px', padding: '13px',
-                cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600'
+                flex: 1, background: 'transparent', border: `1px solid ${t.border}`,
+                color: t.muted, borderRadius: '10px', padding: '13px',
+                cursor: 'pointer', fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: 600
               }}>Schließen</button>
               <button onClick={() => setShowStats(false)} className="btn-press" style={{
-                flex: 2, background: '#3b82f6', border: 'none', color: 'white',
-                borderRadius: '8px', padding: '13px', cursor: 'pointer',
-                fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: '700'
+                flex: 2, background: 'var(--color-accent-primary)', border: 'none', color: 'white',
+                borderRadius: '10px', padding: '13px', cursor: 'pointer',
+                fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: 700,
+                boxShadow: '0 4px 14px rgba(59,130,246,0.35)'
               }}>Tour teilen 🚀</button>
             </div>
           </div>
