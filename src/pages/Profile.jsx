@@ -2,15 +2,44 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import RouteDetail from '../components/RouteDetail'
 
-// ── Vehicle types ─────────────────────────────────────────────────────────────
+// ── Vehicle types (3 categories) ──────────────────────────────────────────────
 const VEHICLE_TYPES = [
-  { id: 'motorrad',   label: 'Motorrad',    emoji: '🏍️' },
-  { id: 'auto',       label: 'Auto',        emoji: '🚗' },
-  { id: 'sportwagen', label: 'Sportwagen',  emoji: '🏎️' },
-  { id: 'suv',        label: 'SUV / Pickup',emoji: '🚙' },
-  { id: 'quad',       label: 'Quad / ATV',  emoji: '🚜' },
-  { id: 'sonstiges',  label: 'Sonstiges',   emoji: '🚘' },
+  { id: 'motorrad',  label: 'Motorrad' },
+  { id: 'auto',      label: 'Auto'     },
+  { id: 'sonstiges', label: 'Sonstiges'},
 ]
+
+// SVG icon per vehicle type (stroke-based, no emoji)
+function VehicleIcon({ type, size = 32, color = 'currentColor' }) {
+  const s = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
+  if (type === 'motorrad') return (
+    <svg {...s}>
+      <circle cx="5.5" cy="17.5" r="2.5"/>
+      <circle cx="18.5" cy="17.5" r="2.5"/>
+      <path d="M5.5 17.5L8 10.5L12 9.5L15 6.5H18L19.5 9.5L21 11.5L18.5 17.5"/>
+      <path d="M8 10.5L12 11.5L15 10.5"/>
+    </svg>
+  )
+  if (type === 'auto') return (
+    <svg {...s}>
+      <path d="M3 11l2-5h14l2 5"/>
+      <rect x="1" y="11" width="22" height="7" rx="1"/>
+      <circle cx="6.5" cy="18" r="1.5"/>
+      <circle cx="17.5" cy="18" r="1.5"/>
+      <path d="M1 14h22"/>
+    </svg>
+  )
+  // sonstiges — steering wheel / generic
+  return (
+    <svg {...s}>
+      <circle cx="12" cy="12" r="9"/>
+      <circle cx="12" cy="12" r="3"/>
+      <line x1="12" y1="3" x2="12" y2="9"/>
+      <line x1="3" y1="12" x2="9" y2="12"/>
+      <line x1="15" y1="12" x2="21" y2="12"/>
+    </svg>
+  )
+}
 
 // ── Brands per category ───────────────────────────────────────────────────────
 const MOTO_BRANDS = [
@@ -27,10 +56,11 @@ const CAR_BRANDS = [
   'Peugeot', 'Porsche', 'Renault', 'Rolls-Royce', 'Seat', 'Skoda',
   'Subaru', 'Tesla', 'Toyota', 'Volkswagen', 'Volvo',
 ]
-const QUAD_BRANDS = [
-  'Arctic Cat', 'Can-Am', 'CF Moto', 'Honda', 'Husqvarna', 'Kawasaki',
-  'KTM', 'Kymco', 'Polaris', 'Quadix', 'Suzuki', 'TGB', 'Yamaha',
-]
+const OTHER_BRANDS = [
+  'Arctic Cat', 'Can-Am', 'CF Moto', 'Honda', 'Kawasaki', 'KTM',
+  'Kymco', 'Polaris', 'Suzuki', 'Yamaha',
+  ...CAR_BRANDS, ...MOTO_BRANDS,
+].filter((b, i, a) => a.indexOf(b) === i).sort()
 
 // Legacy alias so nothing else breaks
 const BIKE_BRANDS = MOTO_BRANDS
@@ -1235,9 +1265,12 @@ function BikeCard({ bike, t, onEdit }) {
 
         {/* Brand + model bottom-left */}
         <div style={{ position: 'absolute', bottom: '14px', left: '16px', right: bike.hp ? '70px' : '16px' }}>
-          <p style={{ color: '#3b82f6', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '3px', fontFamily: "'Barlow', sans-serif', display: 'flex', alignItems: 'center', gap: '5px'" }}>
-            {VEHICLE_TYPES.find(v => v.id === bike.vehicle_type)?.emoji || '🏍️'} {bike.brand}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+            <VehicleIcon type={bike.vehicle_type || 'motorrad'} size={13} color="var(--color-accent-primary)" />
+            <p style={{ color: 'var(--color-accent-primary)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+              {bike.brand}
+            </p>
+          </div>
           <p style={{ color: 'white', fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', lineHeight: 1 }}>
             {bike.model}
             {bike.year && <span style={{ fontSize: '15px', opacity: 0.65, marginLeft: '8px', fontWeight: 500 }}>{bike.year}</span>}
@@ -1427,9 +1460,10 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
         {/* Header */}
         <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
           <div>
-            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>
-            {VEHICLE_TYPES.find(v => v.id === bike.vehicle_type)?.emoji || '🏍️'} Fahrzeug bearbeiten
-          </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <VehicleIcon type={bike.vehicle_type || 'motorrad'} size={20} color="var(--color-accent-primary)" />
+            <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Fahrzeug bearbeiten</h3>
+          </div>
             <p style={{ color: t.muted, fontSize: '12px', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>{bike.brand} {bike.model}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
@@ -1588,9 +1622,9 @@ function AddVehicleModal({ t, onClose, onSaved }) {
   const effectiveBrand = form.brand === '__other__' ? form.customBrand : form.brand
 
   // Pick the right brand list based on vehicle type
-  const brandListForType = vehicleType === 'quad' ? QUAD_BRANDS
-    : (vehicleType === 'motorrad') ? MOTO_BRANDS
-    : CAR_BRANDS
+  const brandListForType = vehicleType === 'motorrad' ? MOTO_BRANDS
+    : vehicleType === 'auto' ? CAR_BRANDS
+    : OTHER_BRANDS
   const filteredBrands = brandListForType.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
 
   // Auto-fetch image when brand + model are set
@@ -1662,29 +1696,43 @@ function AddVehicleModal({ t, onClose, onSaved }) {
   const focusOff = e => e.target.style.borderColor = t.border
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} className="animate-fadeIn">
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px 20px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="animate-scaleIn">
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} className="animate-fadeIn">
+      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }} className="animate-scaleIn">
 
         {/* Header */}
-        <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+        <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
           <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: 0 }}>Fahrzeug hinzufügen</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '24px', padding: 0, lineHeight: 1 }}>×</button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
 
-          {/* Vehicle type selector */}
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: t.muted, marginBottom: '8px', fontFamily: "'Barlow', sans-serif" }}>Fahrzeugtyp</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              {VEHICLE_TYPES.map(vt => (
-                <button key={vt.id} onClick={() => { setVehicleType(vt.id); setForm(f => ({ ...f, brand: '', customBrand: '' })); setBrandSearch('') }}
-                  style={{ padding: '10px 6px', background: vehicleType === vt.id ? 'rgba(59,130,246,0.15)' : t.bg, border: `1.5px solid ${vehicleType === vt.id ? '#3b82f6' : t.border}`, borderRadius: '10px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
-                  <div style={{ fontSize: '22px', marginBottom: '3px', lineHeight: 1 }}>{vt.emoji}</div>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: vehicleType === vt.id ? '#3b82f6' : t.muted, fontFamily: "'Barlow', sans-serif" }}>{vt.label}</div>
+          {/* Vehicle type selector — 3 clean cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+            {VEHICLE_TYPES.map(vt => {
+              const active = vehicleType === vt.id
+              return (
+                <button key={vt.id}
+                  onClick={() => { setVehicleType(vt.id); setForm(f => ({ ...f, brand: '', customBrand: '' })); setBrandSearch('') }}
+                  style={{
+                    padding: '14px 8px 12px', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: '8px',
+                    background: active ? 'var(--color-accent-primary)' : t.bg,
+                    border: `1.5px solid ${active ? 'var(--color-accent-primary)' : t.border}`,
+                    borderRadius: '14px', cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    boxShadow: active ? '0 4px 14px rgba(59,130,246,0.3)' : 'none',
+                  }}>
+                  <VehicleIcon type={vt.id} size={30} color={active ? '#fff' : t.muted} />
+                  <span style={{
+                    fontSize: '12px', fontWeight: 700,
+                    color: active ? '#fff' : t.muted,
+                    fontFamily: "'Barlow', sans-serif",
+                    letterSpacing: '0.02em',
+                  }}>{vt.label}</span>
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
           {/* Image preview */}
