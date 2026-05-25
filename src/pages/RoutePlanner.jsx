@@ -37,16 +37,23 @@ function FitBounds({ positions }) {
   return null
 }
 
-export default function RoutePlanner({ darkMode, onClose }) {
+export default function RoutePlanner({ darkMode, onClose, destinationPoint }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
   } : {
     bg: '#f5f5f5', surface: '#fff', border: '#e5e5e5', text: '#0a0a0a', muted: '#888'
   }
 
+  const destLabel = destinationPoint?.label || ''
+
   const [stops, setStops] = useState([
     { id: 1, address: '', coords: null, loading: false },
-    { id: 2, address: '', coords: null, loading: false },
+    {
+      id: 2,
+      address: destinationPoint ? destLabel : '',
+      coords: destinationPoint ? { lat: destinationPoint.lat, lng: destinationPoint.lng } : null,
+      loading: false,
+    },
   ])
   const [routeCoords, setRouteCoords] = useState([])
   const [routeInfo, setRouteInfo] = useState(null)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet'
 import { supabase } from '../supabase'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -71,6 +71,8 @@ export default function Map({ darkMode, onSelectRider }) {
   const [showRiders, setShowRiders] = useState(false)
   const [activeMode, setActiveMode] = useState('map')
   const [showPlanner, setShowPlanner] = useState(false)
+  const [selectedRider, setSelectedRider] = useState(null)   // { rider, lat, lng }
+  const [routeTarget, setRouteTarget] = useState(null)       // { lat, lng, label }
 
   const watchRef = useRef(null)
   const intervalRef = useRef(null)
@@ -195,7 +197,13 @@ export default function Map({ darkMode, onSelectRider }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
-      {showPlanner && <RoutePlanner darkMode={darkMode} onClose={() => setShowPlanner(false)} />}
+      {showPlanner && (
+        <RoutePlanner
+          darkMode={darkMode}
+          onClose={() => { setShowPlanner(false); setRouteTarget(null) }}
+          destinationPoint={routeTarget}
+        />
+      )}
 
       {/* Map */}
       <div style={{ flex: 1, position: 'relative' }}>
@@ -204,15 +212,7 @@ export default function Map({ darkMode, onSelectRider }) {
           {centerOn && followMe && <CenterMap position={centerOn} />}
 
           {myPosition && (
-            <Marker position={myPosition} icon={createRiderIcon('#3b82f6', true, myProfile?.avatar_url, myProfile?.username)}>
-              <Popup>
-                <div style={{ fontFamily: "'Barlow', sans-serif" }}>
-                  <p style={{ fontWeight: '700' }}>Du</p>
-                  <p>{speed} km/h · Max: {maxSpeed} km/h</p>
-                  <p>{distance.toFixed(2)} km gefahren</p>
-                </div>
-              </Popup>
-            </Marker>
+            <Marker position={myPosition} icon={createRiderIcon('#3b82f6', true, myProfile?.avatar_url, myProfile?.username)} />
           )}
 
           {speedHistory.length > 1 && speedHistory.map((point, i) => {
@@ -228,25 +228,20 @@ export default function Map({ darkMode, onSelectRider }) {
             )
           })}
 
-          {liveRiders.map(rider => (
-            <Marker
-              key={rider.id}
-              position={[48.14, 11.58]}
-              icon={createRiderIcon('#f97316', false, rider.profiles?.avatar_url, rider.profiles?.username)}
-              eventHandlers={{
-                click: () => onSelectRider && onSelectRider(rider.profiles?.id || rider.user_id)
-              }}
-            >
-              <Popup>
-                <div
-                  onClick={() => onSelectRider && onSelectRider(rider.profiles?.id || rider.user_id)}
-                  style={{ cursor: 'pointer', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}
-                >
-                  {rider.profiles?.username || 'Fahrer'} →
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {liveRiders.map(rider => {
+            const lat = rider.lat || 48.14
+            const lng = rider.lng || 11.58
+            return (
+              <Marker
+                key={rider.id}
+                position={[lat, lng]}
+                icon={createRiderIcon('#f97316', false, rider.profiles?.avatar_url, rider.profiles?.username)}
+                eventHandlers={{
+                  click: () => setSelectedRider({ rider, lat, lng })
+                }}
+              />
+            )
+          })}
         </MapContainer>
 
         {/* Route Planner Button — top right, no emoji */}
@@ -327,6 +322,129 @@ export default function Map({ darkMode, onSelectRider }) {
             </div>
           </>
         )}
+
+        {/* ── Rider action card ── */}
+        {selectedRider && (() => {
+          const r = selectedRider.rider
+          const username = r.profiles?.username || 'Fahrer'
+          const avatar = r.profiles?.avatar_url
+          const initials = username.slice(0, 2).toUpperCase()
+          return (
+            <div style={{
+              position: 'absolute', bottom: '80px', left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1200, width: 'calc(100% - 32px)', maxWidth: '380px',
+            }} className="animate-scaleIn">
+              <div style={{
+                background: t.surface, borderRadius: '18px',
+                border: `1px solid ${t.border}`,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+                overflow: 'hidden',
+              }}>
+                {/* Close strip */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 16px 10px',
+                  borderBottom: `1px solid ${t.border}`,
+                }}>
+                  {/* Avatar + name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '42px', height: '42px', borderRadius: '50%',
+                      background: '#f97316', overflow: 'hidden', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '15px', fontWeight: 700, color: 'white',
+                      border: '2px solid rgba(249,115,22,0.4)',
+                    }}>
+                      {avatar
+                        ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : initials}
+                    </div>
+                    <div>
+                      <p style={{ color: t.text, fontSize: '15px', fontWeight: 700, fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+                        @{username}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f43f5e', flexShrink: 0 }} className="animate-pulse" />
+                        <span style={{ color: '#f43f5e', fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}>Jetzt live</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Close */}
+                  <button onClick={() => setSelectedRider(null)} style={{
+                    background: t.bg, border: `1px solid ${t.border}`,
+                    color: t.muted, borderRadius: '50%', width: '30px', height: '30px',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, fontSize: '16px', lineHeight: 1,
+                  }}>×</button>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0' }}>
+                  {/* Profil ansehen */}
+                  <button
+                    onClick={() => { setSelectedRider(null); onSelectRider && onSelectRider(r.profiles?.id || r.user_id) }}
+                    style={{
+                      padding: '14px 8px', background: 'transparent', border: 'none',
+                      borderRight: `1px solid ${t.border}`,
+                      cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: '6px',
+                      transition: 'background var(--transition-fast)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.bg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: t.text, fontFamily: "'Barlow', sans-serif", textAlign: 'center', lineHeight: 1.2 }}>Profil{'\n'}ansehen</span>
+                  </button>
+
+                  {/* Nachricht */}
+                  <button
+                    onClick={() => { setSelectedRider(null); onSelectRider && onSelectRider(r.profiles?.id || r.user_id) }}
+                    style={{
+                      padding: '14px 8px', background: 'transparent', border: 'none',
+                      borderRight: `1px solid ${t.border}`,
+                      cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: '6px',
+                      transition: 'background var(--transition-fast)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.bg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: t.text, fontFamily: "'Barlow', sans-serif", textAlign: 'center', lineHeight: 1.2 }}>Nachricht{'\n'}senden</span>
+                  </button>
+
+                  {/* Route planen */}
+                  <button
+                    onClick={() => {
+                      setSelectedRider(null)
+                      setRouteTarget({ lat: selectedRider.lat, lng: selectedRider.lng, label: `@${username}` })
+                      setShowPlanner(true)
+                    }}
+                    style={{
+                      padding: '14px 8px', background: 'transparent', border: 'none',
+                      cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', gap: '6px',
+                      transition: 'background var(--transition-fast)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = t.bg}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                    </svg>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: t.text, fontFamily: "'Barlow', sans-serif", textAlign: 'center', lineHeight: 1.2 }}>Route{'\n'}planen</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Live Riders Button — bottom left over the map */}
         {liveRiders.length > 0 && (
