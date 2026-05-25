@@ -75,6 +75,11 @@ export default function Map({
   const [showPlanner,   setShowPlanner]   = useState(false)
   const [selectedRider, setSelectedRider] = useState(null)   // { rider, lat, lng }
   const [routeTarget,   setRouteTarget]   = useState(null)   // { lat, lng, label }
+  const [isOnline,      setIsOnline]      = useState(false)  // presence / visibility toggle
+  const [onlineLoading, setOnlineLoading] = useState(false)
+
+  const presenceWatchRef   = useRef(null)
+  const presenceSessionRef = useRef(null)
 
   // ── Sync myPosition → centerOn when followMe is on ───────────────────────
   useEffect(() => {
@@ -105,6 +110,74 @@ export default function Map({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions' }, loadLiveRiders)
       .subscribe()
     return () => supabase.removeChannel(channel)
+  }, [])
+
+  // ── Online presence ───────────────────────────────────────────────────────
+  const goOnline = async () => {
+    setOnlineLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: sess } = await supabase
+        .from('live_sessions')
+        .insert({ user_id: user.id, is_active: true, visibility: 'public' })
+        .select()
+        .single()
+
+      if (!sess) return
+      presenceSessionRef.current = sess.id
+      setIsOnline(true)
+
+      // Keep position updated in live_sessions while online
+      presenceWatchRef.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords
+          try {
+            await supabase
+              .from('live_sessions')
+              .update({ lat, lng })
+              .eq('id', presenceSessionRef.current)
+          } catch { /* lat/lng column might not exist yet */ }
+        },
+        err => console.error('presence geo error:', err),
+        { enableHighAccuracy: true, maximumAge: 8000, timeout: 15000 }
+      )
+    } catch (err) {
+      console.error('goOnline:', err)
+    } finally {
+      setOnlineLoading(false)
+    }
+  }
+
+  const goOffline = async () => {
+    if (presenceWatchRef.current != null) {
+      navigator.geolocation.clearWatch(presenceWatchRef.current)
+      presenceWatchRef.current = null
+    }
+    if (presenceSessionRef.current) {
+      await supabase
+        .from('live_sessions')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('id', presenceSessionRef.current)
+      presenceSessionRef.current = null
+    }
+    setIsOnline(false)
+  }
+
+  // Cleanup presence session when Map unmounts (tab switch / app close)
+  useEffect(() => {
+    return () => {
+      if (presenceWatchRef.current != null) {
+        navigator.geolocation.clearWatch(presenceWatchRef.current)
+      }
+      if (presenceSessionRef.current) {
+        supabase
+          .from('live_sessions')
+          .update({ is_active: false, ended_at: new Date().toISOString() })
+          .eq('id', presenceSessionRef.current)
+      }
+    }
   }, [])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -180,6 +253,63 @@ export default function Map({
           fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600',
           backdropFilter: 'blur(4px)', letterSpacing: '0.03em',
         }}>Planen</button>
+
+        {/* ── Online / Offline toggle ──────────────────────────────────── */}
+        <div
+          onClick={onlineLoading ? undefined : (isOnline ? goOffline : goOnline)}
+          style={{
+            position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '7px 10px 7px 12px',
+            background: isOnline ? 'rgba(74,222,128,0.14)' : 'rgba(0,0,0,0.75)',
+            border: `1px solid ${isOnline ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: '50px',
+            backdropFilter: 'blur(4px)',
+            cursor: onlineLoading ? 'wait' : 'pointer',
+            transition: 'background 0.25s, border-color 0.25s',
+            userSelect: 'none',
+          }}
+        >
+          {/* Status dot */}
+          <div style={{
+            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+            background: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#444',
+            boxShadow: isOnline && !onlineLoading ? '0 0 7px rgba(74,222,128,0.8)' : 'none',
+            transition: 'background 0.25s, box-shadow 0.25s',
+          }} className={isOnline && !onlineLoading ? 'animate-pulse' : ''} />
+
+          {/* Label */}
+          <span style={{
+            color: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#888',
+            fontSize: '12px', fontWeight: 700,
+            fontFamily: "'Barlow', sans-serif",
+            letterSpacing: '0.04em',
+            minWidth: '42px',
+            transition: 'color 0.25s',
+          }}>
+            {onlineLoading ? '...' : isOnline ? 'Online' : 'Offline'}
+          </span>
+
+          {/* Slide toggle pill */}
+          <div style={{
+            width: '40px', height: '22px', borderRadius: '11px',
+            background: onlineLoading ? '#444' : isOnline ? '#4ade80' : '#2a2a2a',
+            border: `1px solid ${isOnline ? 'transparent' : 'rgba(255,255,255,0.08)'}`,
+            position: 'relative', flexShrink: 0,
+            transition: 'background 0.25s',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '3px',
+              left: isOnline ? '19px' : '3px',
+              width: '14px', height: '14px',
+              borderRadius: '50%',
+              background: 'white',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+              transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            }} />
+          </div>
+        </div>
 
         {/* Ride controls */}
         <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
