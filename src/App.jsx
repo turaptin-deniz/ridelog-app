@@ -38,6 +38,11 @@ function App() {
   const [distance, setDistance] = useState(0)
   const [showRideStats, setShowRideStats] = useState(false)
 
+  // ── Vehicle picker ────────────────────────────────────────────────────────
+  const [myBikes, setMyBikes] = useState([])
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false)
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null)
+
   const watchRef = useRef(null)
   const intervalRef = useRef(null)
   const sessionRef = useRef(null)
@@ -56,6 +61,23 @@ function App() {
       setSession(session)
     })
   }, [])
+
+  // Load user's vehicles once logged in
+  useEffect(() => {
+    if (!session) return
+    const loadBikes = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase
+        .from('motorcycles')
+        .select('id, brand, model, year, hp, image_url, vehicle_type')
+        .eq('user_id', user.id)
+      setMyBikes(data || [])
+    }
+    loadBikes()
+    // Re-load whenever the garage tab might have changed (custom event)
+    window.addEventListener('ridelog:bike-saved', loadBikes)
+    return () => window.removeEventListener('ridelog:bike-saved', loadBikes)
+  }, [session])
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
@@ -99,7 +121,23 @@ function App() {
   }
 
   // ── Ride functions ────────────────────────────────────────────────────────
+
+  // Entry point — shows vehicle picker if user has multiple bikes
   const startRide = async () => {
+    if (myBikes.length > 1) {
+      setShowVehiclePicker(true)
+      return
+    }
+    // 0 or 1 bike — start immediately
+    const vehicleId = myBikes.length === 1 ? myBikes[0].id : null
+    await doStartRide(vehicleId)
+  }
+
+  // Actual ride start — called after vehicle is picked (or directly if 0/1 bike)
+  const doStartRide = async (vehicleId) => {
+    setShowVehiclePicker(false)
+    setSelectedVehicleId(vehicleId)
+
     const { data: { user } } = await supabase.auth.getUser()
     const { data: sess } = await supabase
       .from('live_sessions')
@@ -189,6 +227,7 @@ function App() {
           max_speed: maxSpeed,
           avg_speed: avgSpeed,
           waypoints: JSON.stringify(myTrail),
+          vehicle_id: selectedVehicleId || null,
         })
       } catch { /* column may not exist yet */ }
 
@@ -724,6 +763,93 @@ function App() {
                 }}>
                   <span>{lang.flag} {T(lang.key)}</span>
                   {selectedLanguage === lang.id && <span style={{ color: t.accent, fontSize: '16px' }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Vehicle Picker Modal ─────────────────────────────────────── */}
+        {showVehiclePicker && (
+          <div
+            onClick={() => setShowVehiclePicker(false)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)',
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              zIndex: 2200, padding: 0,
+            }}
+            className="animate-fadeIn"
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: t.surface, border: `1px solid ${t.border}`,
+                borderRadius: '20px 20px 0 0', padding: '20px 20px 32px',
+                width: '100%', maxWidth: '480px',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
+              }}
+              className="animate-scaleIn"
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+                <div>
+                  <h3 style={{ color: t.text, fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px', margin: 0 }}>
+                    FAHRZEUG WÄHLEN
+                  </h3>
+                  <p style={{ color: t.muted, fontSize: '12px', margin: '3px 0 0', fontFamily: "'Barlow', sans-serif" }}>
+                    Mit welchem Fahrzeug fährst du heute?
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowVehiclePicker(false)}
+                  style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '22px', lineHeight: 1, padding: 0 }}
+                >×</button>
+              </div>
+
+              {/* Bike list */}
+              {myBikes.map(bike => (
+                <button
+                  key={bike.id}
+                  onClick={() => doStartRide(bike.id)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
+                    background: t.bg, border: `1px solid ${t.border}`,
+                    borderRadius: '14px', padding: '13px 16px', cursor: 'pointer',
+                    marginBottom: '10px', transition: 'all 0.15s', textAlign: 'left',
+                    boxSizing: 'border-box',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = t.accent; e.currentTarget.style.background = 'rgba(59,130,246,0.06)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.background = t.bg }}
+                >
+                  {/* Thumbnail */}
+                  <div style={{ width: '60px', height: '42px', borderRadius: '8px', background: '#0f172a', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {bike.image_url
+                      ? <img src={bike.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
+                      : (
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          {bike.vehicle_type === 'auto'
+                            ? <><path d="M3 11l2-5h14l2 5"/><rect x="1" y="11" width="22" height="7" rx="1"/><circle cx="6.5" cy="18" r="1.5"/><circle cx="17.5" cy="18" r="1.5"/><path d="M1 14h22"/></>
+                            : <><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M5.5 17.5L8 10.5L12 9.5L15 6.5H18L19.5 9.5L21 11.5L18.5 17.5"/><path d="M8 10.5L12 11.5L15 10.5"/></>
+                          }
+                        </svg>
+                      )
+                    }
+                  </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ color: t.muted, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+                      {bike.brand}
+                    </p>
+                    <p style={{ color: t.text, fontSize: '17px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: '1px 0 0', lineHeight: 1.1 }}>
+                      {bike.model}
+                      {bike.year ? <span style={{ fontSize: '12px', fontWeight: 400, color: t.muted, marginLeft: '6px' }}>{bike.year}</span> : null}
+                    </p>
+                    {bike.hp ? <p style={{ color: t.accent, fontSize: '11px', fontWeight: 600, fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>{bike.hp} PS</p> : null}
+                  </div>
+                  {/* Arrow */}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
                 </button>
               ))}
             </div>

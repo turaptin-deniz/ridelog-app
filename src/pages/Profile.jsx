@@ -140,11 +140,13 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [showAddBike, setShowAddBike] = useState(false)
   const [editingBike, setEditingBike] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [vehicleStats, setVehicleStats] = useState({}) // { [bike.id]: { km, rides } }
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
   const [selectedRoute, setSelectedRoute] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
-  const [editData, setEditData] = useState({ username: '', bio: '', location: '' })
+  const [editData, setEditData] = useState({ display_name: '', username: '', bio: '', location: '' })
+  const [usernameError, setUsernameError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const avatarRef = useRef()
@@ -159,6 +161,16 @@ export default function Profile({ darkMode, setDarkMode }) {
     const { data: bikeData } = await supabase.from('motorcycles').select('*').eq('user_id', user.id)
     const { data: routeData } = await supabase.from('routes').select('*, profiles(username, avatar_url)').eq('user_id', user.id).order('created_at', { ascending: false })
     const { data: badgeData } = await supabase.from('badges').select('*').eq('user_id', user.id)
+
+    // Per-vehicle stats (routes with vehicle_id)
+    const stats = {}
+    routeData?.forEach(r => {
+      if (!r.vehicle_id) return
+      if (!stats[r.vehicle_id]) stats[r.vehicle_id] = { km: 0, rides: 0 }
+      stats[r.vehicle_id].km += r.distance_km || 0
+      stats[r.vehicle_id].rides += 1
+    })
+    setVehicleStats(stats)
     const { data: postData } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
 
     // Load reposted posts
@@ -176,7 +188,7 @@ export default function Profile({ darkMode, setDarkMode }) {
     setEarnedBadges(badgeData?.map(b => b.type) || [])
     setUserPosts(postData || [])
     setUserReposts(repostList)
-    setEditData({ username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '' })
+    setEditData({ display_name: prof?.display_name || '', username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '' })
     setLoading(false)
   }
 
@@ -241,19 +253,60 @@ const toggleFollow = async () => {
     }
   }, [])
 
+  const canChangeUsername = () => {
+    if (!profile?.username_changed_at) return true
+    const msPerDay = 1000 * 60 * 60 * 24
+    const daysSince = (Date.now() - new Date(profile.username_changed_at).getTime()) / msPerDay
+    return daysSince >= 30
+  }
+
+  const daysUntilUsernameChange = () => {
+    if (!profile?.username_changed_at) return 0
+    const msPerDay = 1000 * 60 * 60 * 24
+    const daysSince = (Date.now() - new Date(profile.username_changed_at).getTime()) / msPerDay
+    return Math.ceil(30 - daysSince)
+  }
+
   const saveProfile = async () => {
+    setUsernameError('')
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('profiles').update(editData).eq('id', user.id).select().single()
+    const updates = {
+      display_name: editData.display_name,
+      bio: editData.bio,
+      location: editData.location,
+    }
+    // Nur updaten wenn Username sich geändert hat
+    if (editData.username.trim() !== (profile?.username || '')) {
+      if (!canChangeUsername()) {
+        setUsernameError(`Gesperrt — noch ${daysUntilUsernameChange()} Tag${daysUntilUsernameChange() === 1 ? '' : 'e'} bis zur nächsten Änderung.`)
+        return
+      }
+      if (!editData.username.trim()) {
+        setUsernameError('Username darf nicht leer sein.')
+        return
+      }
+      updates.username = editData.username.trim()
+      updates.username_changed_at = new Date().toISOString()
+    }
+    let { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id).select().single()
+    // Graceful fallback wenn display_name / username_changed_at Spalte fehlt
+    if (error && /display_name|username_changed_at|column/i.test(error.message || '')) {
+      const { display_name: _d, username_changed_at: _u, ...safeUpdates } = updates
+      const r = await supabase.from('profiles').update(safeUpdates).eq('id', user.id).select().single()
+      data = r.data
+    }
     if (data) setProfile(data)
     setEditing(false)
   }
 
   const cancelEdit = () => {
     setEditData({
+      display_name: profile?.display_name || '',
       username: profile?.username || '',
       bio: profile?.bio || '',
       location: profile?.location || ''
     })
+    setUsernameError('')
     setEditing(false)
   }
 
@@ -409,159 +462,204 @@ const toggleFollow = async () => {
 
       {/* Info */}
       <div style={{ padding: '0 16px 12px', borderBottom: `1px solid ${t.border}` }}>
-        {/* Name + Edit/Save Icon in einer Zeile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          {editing ? (
+
+        {editing ? (
+          /* ── EDIT MODE ── */
+          <div style={{ marginBottom: '8px' }}>
+
+            {/* Anzeigename (groß + fett) */}
             <input
               type="text"
-              value={editData.username}
-              onChange={e => setEditData({ ...editData, username: e.target.value })}
-              placeholder="username"
+              value={editData.display_name}
+              onChange={e => setEditData({ ...editData, display_name: e.target.value })}
+              placeholder="Anzeigename"
               autoFocus
               style={{
-                flex: 1, minWidth: 0,
-                fontSize: '20px', fontWeight: '700',
-                fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px',
+                width: '100%', boxSizing: 'border-box',
+                fontSize: '22px', fontWeight: '800',
+                fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px',
                 background: t.bg, border: `1px solid ${t.border}`,
-                borderRadius: '8px', padding: '6px 10px',
-                color: t.text, outline: 'none',
-                transition: 'border-color 0.15s'
+                borderRadius: '8px', padding: '7px 10px', marginBottom: '8px',
+                color: t.text, outline: 'none', transition: 'border-color 0.15s'
               }}
               onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
               onBlur={e => e.target.style.borderColor = t.border}
             />
-          ) : (
-            <h2 style={{ fontSize: '20px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
-              @{profile?.username}
-            </h2>
-          )}
 
-          {/* Edit / Save Toggle Icon */}
-          <button
-            onClick={editing ? saveProfile : () => setEditing(true)}
-            style={{
-              background: editing ? 'var(--color-accent-primary)' : 'transparent',
-              border: editing ? 'none' : 'none',
-              padding: editing ? '6px' : '4px',
-              borderRadius: editing ? '8px' : '4px',
-              cursor: 'pointer',
-              color: editing ? 'white' : t.muted,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-              flexShrink: 0
-            }}
-            onMouseEnter={e => { if (!editing) e.currentTarget.style.color = 'var(--color-accent-primary)' }}
-            onMouseLeave={e => { if (!editing) e.currentTarget.style.color = t.muted }}
-            title={editing ? 'Speichern' : 'Profil bearbeiten'}
-          >
-            {editing ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+            {/* Username (dünn + kleiner) — mit 30-Tage-Sperre */}
+            {canChangeUsername() ? (
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: t.muted, fontSize: '14px', fontFamily: "'Barlow', sans-serif", pointerEvents: 'none' }}>@</span>
+                  <input
+                    type="text"
+                    value={editData.username}
+                    onChange={e => { setEditData({ ...editData, username: e.target.value }); setUsernameError('') }}
+                    placeholder="username"
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      fontSize: '14px', fontWeight: '400',
+                      fontFamily: "'Barlow', sans-serif",
+                      background: t.bg, border: `1px solid ${usernameError ? '#ef4444' : t.border}`,
+                      borderRadius: '8px', padding: '7px 10px 7px 26px',
+                      color: t.muted, outline: 'none', transition: 'border-color 0.15s'
+                    }}
+                    onFocus={e => e.target.style.borderColor = usernameError ? '#ef4444' : 'var(--color-accent-primary)'}
+                    onBlur={e => e.target.style.borderColor = usernameError ? '#ef4444' : t.border}
+                  />
+                </div>
+                {usernameError ? (
+                  <p style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontFamily: "'Barlow', sans-serif" }}>{usernameError}</p>
+                ) : (
+                  <p style={{ color: t.muted, fontSize: '10px', marginTop: '4px', fontFamily: "'Barlow', sans-serif", opacity: 0.7 }}>
+                    Nach einer Änderung erst wieder in 30 Tagen änderbar
+                  </p>
+                )}
+              </div>
             ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '8px 10px', background: '#f59e0b12', border: '1px solid #f59e0b40', borderRadius: '8px' }}>
+                <span style={{ color: t.muted, fontSize: '14px', fontFamily: "'Barlow', sans-serif" }}>@{profile?.username}</span>
+                <span style={{ marginLeft: 'auto', color: '#f59e0b', fontSize: '11px', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+                  🔒 {daysUntilUsernameChange()} Tag{daysUntilUsernameChange() === 1 ? '' : 'e'} gesperrt
+                </span>
+              </div>
             )}
-          </button>
 
-          {/* Cancel button — only when editing */}
-          {editing && (
-            <button
-              onClick={cancelEdit}
-              style={{
-                background: 'transparent', border: `1px solid ${t.border}`,
-                padding: '6px', borderRadius: '8px', cursor: 'pointer',
-                color: t.muted, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s', flexShrink: 0
-              }}
-              title="Abbrechen"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          )}
-
-          {/* Liga Badge — only when not editing */}
-          {!editing && (
-            <div style={{
-              background: `${league.color}1a`,
-              border: `1px solid ${league.color}55`,
-              borderRadius: '6px',
-              padding: '3px 10px',
-              display: 'flex', alignItems: 'center',
-            }}>
-              <span style={{
-                color: league.color,
-                fontSize: '11px',
-                fontWeight: '700',
-                fontFamily: "'Barlow', sans-serif",
-                letterSpacing: '0.04em'
-              }}>
-                {league.label}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Location */}
-        {editing ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <input
-              type="text"
-              value={editData.location}
-              onChange={e => setEditData({ ...editData, location: e.target.value })}
-              placeholder="z.B. München, Bayern"
-              style={{
-                flex: 1, minWidth: 0,
-                fontSize: '13px',
-                fontFamily: "'Barlow', sans-serif",
-                background: t.bg, border: `1px solid ${t.border}`,
-                borderRadius: '8px', padding: '6px 10px',
-                color: t.text, outline: 'none',
-                transition: 'border-color 0.15s'
-              }}
-              onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
-              onBlur={e => e.target.style.borderColor = t.border}
-            />
-          </div>
-        ) : (
-          profile?.location && (
-            <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* Location im Edit-Modus */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
-              {profile.location}
-            </p>
-          )
-        )}
+              <input
+                type="text"
+                value={editData.location}
+                onChange={e => setEditData({ ...editData, location: e.target.value })}
+                placeholder="z.B. München, Bayern"
+                style={{
+                  flex: 1, minWidth: 0, fontSize: '13px',
+                  fontFamily: "'Barlow', sans-serif",
+                  background: t.bg, border: `1px solid ${t.border}`,
+                  borderRadius: '8px', padding: '6px 10px',
+                  color: t.text, outline: 'none', transition: 'border-color 0.15s'
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+                onBlur={e => e.target.style.borderColor = t.border}
+              />
+            </div>
 
-        {/* Bio */}
-        {editing ? (
-          <textarea
-            value={editData.bio}
-            onChange={e => setEditData({ ...editData, bio: e.target.value })}
-            placeholder="Erzähl was über dich..."
-            rows={3}
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              fontSize: '14px', lineHeight: '1.6',
-              fontFamily: "'Barlow', sans-serif",
-              background: t.bg, border: `1px solid ${t.border}`,
-              borderRadius: '8px', padding: '8px 10px',
-              color: t.text, outline: 'none', resize: 'none',
-              transition: 'border-color 0.15s'
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
-            onBlur={e => e.target.style.borderColor = t.border}
-          />
+            {/* Bio im Edit-Modus */}
+            <textarea
+              value={editData.bio}
+              onChange={e => setEditData({ ...editData, bio: e.target.value })}
+              placeholder="Erzähl was über dich..."
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                fontSize: '14px', lineHeight: '1.6',
+                fontFamily: "'Barlow', sans-serif",
+                background: t.bg, border: `1px solid ${t.border}`,
+                borderRadius: '8px', padding: '8px 10px', marginBottom: '10px',
+                color: t.text, outline: 'none', resize: 'none',
+                transition: 'border-color 0.15s'
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--color-accent-primary)'}
+              onBlur={e => e.target.style.borderColor = t.border}
+            />
+
+            {/* Speichern / Abbrechen */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={saveProfile}
+                style={{
+                  background: 'var(--color-accent-primary)', border: 'none',
+                  padding: '9px 18px', borderRadius: '8px', cursor: 'pointer',
+                  color: 'white', fontSize: '13px', fontWeight: 700,
+                  fontFamily: "'Barlow', sans-serif",
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 2px 10px rgba(59,130,246,0.3)', transition: 'all 0.15s'
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Speichern
+              </button>
+              <button
+                onClick={cancelEdit}
+                style={{
+                  background: 'transparent', border: `1px solid ${t.border}`,
+                  padding: '9px 18px', borderRadius: '8px', cursor: 'pointer',
+                  color: t.muted, fontSize: '13px', fontWeight: 600,
+                  fontFamily: "'Barlow', sans-serif",
+                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s'
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Abbrechen
+              </button>
+            </div>
+          </div>
         ) : (
-          profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6' }}>{profile.bio}</p>
+          /* ── DISPLAY MODE ── */
+          <>
+            {/* Name-Zeile: Anzeigename + Liga + Edit-Button */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <div>
+                {/* Anzeigename — groß & fett */}
+                <h2 style={{ fontSize: '22px', fontWeight: '800', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', lineHeight: 1.1, marginBottom: '4px' }}>
+                  {profile?.display_name || profile?.username}
+                </h2>
+                {/* Username — dünn & kleiner */}
+                <p style={{ fontSize: '14px', fontWeight: '400', color: t.muted, fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+                  @{profile?.username}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginTop: '4px' }}>
+                {/* Liga Badge */}
+                <div style={{
+                  background: `${league.color}1a`, border: `1px solid ${league.color}55`,
+                  borderRadius: '6px', padding: '3px 10px', display: 'flex', alignItems: 'center',
+                }}>
+                  <span style={{ color: league.color, fontSize: '11px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", letterSpacing: '0.04em' }}>
+                    {league.label}
+                  </span>
+                </div>
+                {/* Edit Button */}
+                <button
+                  onClick={() => setEditing(true)}
+                  style={{
+                    background: 'transparent', border: 'none', padding: '4px', borderRadius: '4px',
+                    cursor: 'pointer', color: t.muted,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s', flexShrink: 0
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--color-accent-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = t.muted}
+                  title="Profil bearbeiten"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Location */}
+            {profile?.location && (
+              <p style={{ color: t.muted, fontSize: '13px', marginBottom: '6px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                {profile.location}
+              </p>
+            )}
+
+            {/* Bio */}
+            {profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6', marginTop: profile?.location ? 0 : '8px' }}>{profile.bio}</p>}
+          </>
         )}
       </div>
 
@@ -845,6 +943,7 @@ const toggleFollow = async () => {
               bikes.map(bike => (
                 <BikeCard
                   key={bike.id} bike={bike} t={t}
+                  stats={vehicleStats[bike.id] || null}
                   onEdit={() => setEditingBike(bike)}
                 />
               ))
@@ -1210,7 +1309,7 @@ function PostDetailModal({ post, profile, t, onClose }) {
 }
 
 // ── BikeCard ─────────────────────────────────────────────────────────────────
-function BikeCard({ bike, t, onEdit }) {
+function BikeCard({ bike, t, onEdit, stats }) {
   const [slideIdx, setSlideIdx] = useState(0)
 
   // User-uploaded photos take priority; fall back to Wikipedia image
@@ -1318,13 +1417,56 @@ function BikeCard({ bike, t, onEdit }) {
           </div>
         )}
         {bike.odometer && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 10px', background: t.bg, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 10px', background: t.bg, borderRadius: '8px', border: `1px solid ${t.border}`, marginBottom: stats ? '8px' : 0 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-2"/><circle cx="9" cy="17" r="2"/><circle cx="18" cy="17" r="2"/>
             </svg>
             <span style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
               {bike.odometer.toLocaleString('de-DE')} km
             </span>
+          </div>
+        )}
+
+        {/* Per-vehicle ride stats */}
+        {stats && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: '8px', marginTop: specs.length === 0 && !bike.odometer ? 0 : '0',
+          }}>
+            <div style={{
+              background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
+              borderRadius: '10px', padding: '10px 12px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12h18M3 6h18M3 18h18"/>
+              </svg>
+              <div>
+                <p style={{ color: 'var(--color-accent-primary)', fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1, margin: 0 }}>
+                  {stats.rides}
+                </p>
+                <p style={{ color: t.muted, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>
+                  Touren
+                </p>
+              </div>
+            </div>
+            <div style={{
+              background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)',
+              borderRadius: '10px', padding: '10px 12px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+              <div>
+                <p style={{ color: '#4ade80', fontSize: '18px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1, margin: 0 }}>
+                  {Math.round(stats.km)}
+                </p>
+                <p style={{ color: t.muted, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.07em', fontFamily: "'Barlow', sans-serif", margin: '2px 0 0' }}>
+                  km gefahren
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

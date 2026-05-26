@@ -245,69 +245,73 @@ export default function Map({
           })}
         </MapContainer>
 
-        {/* Route planner button */}
-        <button onClick={() => setShowPlanner(true)} style={{
+        {/* ── Top-right: Planen (bigger) + Online/Offline gestapelt ──── */}
+        <div style={{
           position: 'absolute', top: '12px', right: '12px', zIndex: 1000,
-          background: 'rgba(0,0,0,0.75)', color: 'white', border: 'none',
-          borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
-          fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600',
-          backdropFilter: 'blur(4px)', letterSpacing: '0.03em',
-        }}>Planen</button>
-
-        {/* ── Online / Offline toggle ──────────────────────────────────── */}
-        <div
-          onClick={onlineLoading ? undefined : (isOnline ? goOffline : goOnline)}
-          style={{
-            position: 'absolute', top: '12px', left: '12px', zIndex: 1000,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px',
+        }}>
+          {/* Route planner button — bigger */}
+          <button onClick={() => setShowPlanner(true)} style={{
+            background: 'rgba(0,0,0,0.82)', color: 'white', border: 'none',
+            borderRadius: '10px', padding: '11px 20px', cursor: 'pointer',
+            fontSize: '14px', fontFamily: "'Barlow', sans-serif", fontWeight: '700',
+            backdropFilter: 'blur(6px)', letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '7px 10px 7px 12px',
-            background: isOnline ? 'rgba(74,222,128,0.14)' : 'rgba(0,0,0,0.75)',
-            border: `1px solid ${isOnline ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.1)'}`,
-            borderRadius: '50px',
-            backdropFilter: 'blur(4px)',
-            cursor: onlineLoading ? 'wait' : 'pointer',
-            transition: 'background 0.25s, border-color 0.25s',
-            userSelect: 'none',
-          }}
-        >
-          {/* Status dot */}
-          <div style={{
-            width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-            background: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#444',
-            boxShadow: isOnline && !onlineLoading ? '0 0 7px rgba(74,222,128,0.8)' : 'none',
-            transition: 'background 0.25s, box-shadow 0.25s',
-          }} className={isOnline && !onlineLoading ? 'animate-pulse' : ''} />
-
-          {/* Label */}
-          <span style={{
-            color: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#888',
-            fontSize: '12px', fontWeight: 700,
-            fontFamily: "'Barlow', sans-serif",
-            letterSpacing: '0.04em',
-            minWidth: '42px',
-            transition: 'color 0.25s',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
           }}>
-            {onlineLoading ? '...' : isOnline ? 'Online' : 'Offline'}
-          </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            </svg>
+            Planen
+          </button>
 
-          {/* Slide toggle pill */}
-          <div style={{
-            width: '40px', height: '22px', borderRadius: '11px',
-            background: onlineLoading ? '#444' : isOnline ? '#4ade80' : '#2a2a2a',
-            border: `1px solid ${isOnline ? 'transparent' : 'rgba(255,255,255,0.08)'}`,
-            position: 'relative', flexShrink: 0,
-            transition: 'background 0.25s',
-          }}>
+          {/* Online / Offline toggle — under Planen */}
+          <div
+            onClick={onlineLoading ? undefined : (isOnline ? goOffline : goOnline)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '7px 10px 7px 12px',
+              background: isOnline ? 'rgba(74,222,128,0.14)' : 'rgba(0,0,0,0.82)',
+              border: `1px solid ${isOnline ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: '50px',
+              backdropFilter: 'blur(6px)',
+              cursor: onlineLoading ? 'wait' : 'pointer',
+              transition: 'background 0.25s, border-color 0.25s',
+              userSelect: 'none',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+            }}
+          >
+            {/* Status dot */}
             <div style={{
-              position: 'absolute',
-              top: '3px',
-              left: isOnline ? '19px' : '3px',
-              width: '14px', height: '14px',
-              borderRadius: '50%',
-              background: 'white',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            }} />
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+              background: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#444',
+              boxShadow: isOnline && !onlineLoading ? '0 0 7px rgba(74,222,128,0.8)' : 'none',
+              transition: 'background 0.25s, box-shadow 0.25s',
+            }} className={isOnline && !onlineLoading ? 'animate-pulse' : ''} />
+            {/* Label */}
+            <span style={{
+              color: onlineLoading ? '#facc15' : isOnline ? '#4ade80' : '#888',
+              fontSize: '12px', fontWeight: 700,
+              fontFamily: "'Barlow', sans-serif", letterSpacing: '0.04em',
+              minWidth: '42px', transition: 'color 0.25s',
+            }}>
+              {onlineLoading ? '...' : isOnline ? 'Online' : 'Offline'}
+            </span>
+            {/* Slide toggle pill */}
+            <div style={{
+              width: '40px', height: '22px', borderRadius: '11px',
+              background: onlineLoading ? '#444' : isOnline ? '#4ade80' : '#2a2a2a',
+              border: `1px solid ${isOnline ? 'transparent' : 'rgba(255,255,255,0.08)'}`,
+              position: 'relative', flexShrink: 0, transition: 'background 0.25s',
+            }}>
+              <div style={{
+                position: 'absolute', top: '3px',
+                left: isOnline ? '19px' : '3px',
+                width: '14px', height: '14px', borderRadius: '50%',
+                background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              }} />
+            </div>
           </div>
         </div>
 
