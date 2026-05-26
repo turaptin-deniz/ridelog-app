@@ -141,6 +141,12 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [editingBike, setEditingBike] = useState(null)
   const [loading, setLoading] = useState(true)
   const [vehicleStats, setVehicleStats] = useState({}) // { [bike.id]: { km, rides } }
+
+  // Fahrzeug-Detail View
+  const [bikeDetailBike, setBikeDetailBike]       = useState(null)
+  const [bikeDetailRoutes, setBikeDetailRoutes]   = useState([])
+  const [bikeDetailLoading, setBikeDetailLoading] = useState(false)
+  const [bikeDetailTab, setBikeDetailTab]         = useState('stats')
   const [activeTab, setActiveTab] = useState('posts')
   const [editing, setEditing] = useState(false)
   const [selectedRoute, setSelectedRoute] = useState(null)
@@ -289,11 +295,22 @@ const toggleFollow = async () => {
       updates.username_changed_at = new Date().toISOString()
     }
     let { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id).select().single()
-    // Graceful fallback wenn display_name / username_changed_at Spalte fehlt
-    if (error && /display_name|username_changed_at|column/i.test(error.message || '')) {
-      const { display_name: _d, username_changed_at: _u, ...safeUpdates } = updates
-      const r = await supabase.from('profiles').update(safeUpdates).eq('id', user.id).select().single()
-      data = r.data
+    if (error) {
+      // Fallback: Spalte existiert noch nicht → ohne display_name speichern,
+      // aber display_name im lokalen State behalten damit es sofort sichtbar ist
+      if (/display_name|username_changed_at/i.test(error.message || '')) {
+        const { display_name: dn, username_changed_at: _uc, ...safeUpdates } = updates
+        const r = await supabase.from('profiles').update(safeUpdates).eq('id', user.id).select().single()
+        if (r.data) {
+          // display_name in lokalen State mergen (bleibt bis zum Reload sichtbar)
+          setProfile(prev => ({ ...prev, ...r.data, display_name: dn ?? prev?.display_name }))
+        }
+        setEditing(false)
+        return
+      }
+      // Anderer Fehler — nicht schließen, damit User es erneut versuchen kann
+      console.error('saveProfile error:', error)
+      return
     }
     if (data) setProfile(data)
     setEditing(false)
@@ -308,6 +325,24 @@ const toggleFollow = async () => {
     })
     setUsernameError('')
     setEditing(false)
+  }
+
+  const openBikeDetail = async (bike) => {
+    setBikeDetailBike(bike)
+    setBikeDetailTab('stats')
+    setBikeDetailLoading(true)
+    setBikeDetailRoutes([])
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase
+        .from('routes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('vehicle_id', bike.id)
+        .order('created_at', { ascending: false })
+      setBikeDetailRoutes(data || [])
+    } catch { setBikeDetailRoutes([]) }
+    setBikeDetailLoading(false)
   }
 
   const uploadImage = async (file, bucket, type) => {
@@ -945,6 +980,7 @@ const toggleFollow = async () => {
                   key={bike.id} bike={bike} t={t}
                   stats={vehicleStats[bike.id] || null}
                   onEdit={() => setEditingBike(bike)}
+                  onDetail={() => openBikeDetail(bike)}
                 />
               ))
             )}
@@ -1091,6 +1127,20 @@ const toggleFollow = async () => {
       {/* Route / Meetup detail modal */}
       {selectedRoute && (
         <RouteDetail row={selectedRoute} currentUser={currentUser} t={t} onClose={() => setSelectedRoute(null)} />
+      )}
+
+      {/* Fahrzeug-Detail View */}
+      {bikeDetailBike && (
+        <BikeDetailView
+          bike={bikeDetailBike}
+          routes={bikeDetailRoutes}
+          loading={bikeDetailLoading}
+          tab={bikeDetailTab}
+          onTabChange={setBikeDetailTab}
+          onClose={() => setBikeDetailBike(null)}
+          onSelectRoute={(route) => { setBikeDetailBike(null); setSelectedRoute(route) }}
+          t={t}
+        />
       )}
 
     </div>
@@ -1309,7 +1359,7 @@ function PostDetailModal({ post, profile, t, onClose }) {
 }
 
 // ── BikeCard ─────────────────────────────────────────────────────────────────
-function BikeCard({ bike, t, onEdit, stats }) {
+function BikeCard({ bike, t, onEdit, onDetail, stats }) {
   const [slideIdx, setSlideIdx] = useState(0)
 
   // User-uploaded photos take priority; fall back to Wikipedia image
@@ -1326,7 +1376,12 @@ function BikeCard({ bike, t, onEdit, stats }) {
   ].filter(s => s.value)
 
   return (
-    <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', border: `1px solid ${t.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+    <div
+      onClick={onDetail}
+      style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', border: `1px solid ${t.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.22)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)' }}
+    >
 
       {/* Image header — carousel if multiple photos */}
       <div style={{ height: '200px', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
@@ -1386,7 +1441,7 @@ function BikeCard({ bike, t, onEdit, stats }) {
 
         {/* Edit button top-left */}
         <button
-          onClick={onEdit}
+          onClick={e => { e.stopPropagation(); onEdit() }}
           style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', border: 'none', color: 'white', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', backdropFilter: 'blur(4px)', fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1738,6 +1793,189 @@ function EditBikeModal({ t, bike, onClose, onSaved }) {
                 {deleting ? 'Löschen…' : 'Ja, löschen'}
               </button>
             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── BikeDetailView ────────────────────────────────────────────────────────────
+function BikeDetailView({ bike, routes, loading, tab, onTabChange, onClose, onSelectRoute, t }) {
+  // Stats berechnen
+  const rideRoutes = routes.filter(r => r.distance_km != null)
+  const totalKm    = rideRoutes.reduce((s, r) => s + (r.distance_km || 0), 0)
+  const maxSpd     = rideRoutes.reduce((m, r) => Math.max(m, r.max_speed   || 0), 0)
+  const avgSpds    = rideRoutes.filter(r => (r.avg_speed || 0) > 0)
+  const avgSpd     = avgSpds.length
+    ? Math.round(avgSpds.reduce((s, r) => s + r.avg_speed, 0) / avgSpds.length)
+    : 0
+  const longest    = rideRoutes.reduce((m, r) => Math.max(m, r.distance_km || 0), 0)
+  const totalSecs  = rideRoutes.reduce((s, r) => s + (r.duration_secs || 0), 0)
+
+  const fmt = (secs) => {
+    if (!secs) return '–'
+    const h = Math.floor(secs / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    if (h > 0) return `${h}h ${m}m`
+    return m > 0 ? `${m}m` : '< 1m'
+  }
+
+  const statItems = [
+    { label: 'Kilometer',    value: Math.round(totalKm),           unit: 'km',   icon: '🛣️', color: '#4ade80' },
+    { label: 'Touren',       value: rideRoutes.length,             unit: '',     icon: '🏁', color: '#3b82f6' },
+    { label: 'Max. Tempo',   value: maxSpd,                        unit: 'km/h', icon: '⚡', color: '#f43f5e' },
+    { label: 'Ø Tempo',      value: avgSpd,                        unit: 'km/h', icon: '📊', color: '#facc15' },
+    { label: 'Längste Tour', value: longest.toFixed(1),            unit: 'km',   icon: '🗺️', color: '#a78bfa' },
+    { label: 'Fahrzeit',     value: fmt(totalSecs),                unit: '',     icon: '⏱️', color: '#fb923c' },
+  ]
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 3200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+      className="animate-fadeIn"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: '480px', background: t.surface, borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        className="animate-scaleIn"
+      >
+        {/* Drag handle */}
+        <div style={{ width: '36px', height: '4px', background: t.border, borderRadius: '2px', margin: '10px auto 0', flexShrink: 0 }} />
+
+        {/* Header */}
+        <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <p style={{ color: t.muted, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: "'Barlow', sans-serif", margin: 0 }}>
+              {bike.brand}
+            </p>
+            <h3 style={{ color: t.text, fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.3px', margin: '2px 0 0', lineHeight: 1.1 }}>
+              {bike.model}
+              {bike.year
+                ? <span style={{ fontSize: '14px', fontWeight: 400, color: t.muted, marginLeft: '8px' }}>{bike.year}</span>
+                : null}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: t.bg, border: `1px solid ${t.border}`, color: t.muted, borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, lineHeight: 1 }}
+          >×</button>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: '6px', padding: '14px 20px 12px', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+          {[
+            { id: 'stats',  label: 'Statistiken' },
+            { id: 'touren', label: `Touren (${rideRoutes.length})` },
+          ].map(tb => (
+            <button
+              key={tb.id}
+              onClick={() => onTabChange(tb.id)}
+              style={{
+                flex: 1, padding: '9px 16px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                background: tab === tb.id ? 'var(--color-accent-primary)' : t.bg,
+                color: tab === tb.id ? 'white' : t.muted,
+                fontSize: '13px', fontWeight: 700, fontFamily: "'Barlow', sans-serif",
+                transition: 'all 0.15s',
+              }}
+            >{tb.label}</button>
+          ))}
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 32px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '48px', color: t.muted, fontFamily: "'Barlow', sans-serif" }}>
+              Laden...
+            </div>
+          ) : tab === 'stats' ? (
+            /* ── Statistiken Tab ── */
+            rideRoutes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                <p style={{ fontSize: '40px', marginBottom: '12px' }}>🏁</p>
+                <p style={{ color: t.muted, fontSize: '14px', fontFamily: "'Barlow', sans-serif", lineHeight: 1.6 }}>
+                  Noch keine gespeicherten Touren mit diesem Fahrzeug.
+                  <br/>Starte eine Fahrt und speichere sie!
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {statItems.map(stat => (
+                  <div key={stat.label} style={{ background: t.bg, borderRadius: '12px', padding: '14px', border: `1px solid ${t.border}` }}>
+                    <p style={{ fontSize: '20px', margin: '0 0 6px' }}>{stat.icon}</p>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+                      <p style={{ color: stat.color, fontSize: '22px', fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif", margin: 0, lineHeight: 1 }}>
+                        {stat.value}
+                      </p>
+                      {stat.unit && (
+                        <span style={{ color: t.muted, fontSize: '11px', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>{stat.unit}</span>
+                      )}
+                    </div>
+                    <p style={{ color: t.muted, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: "'Barlow', sans-serif", marginTop: '3px', marginBottom: 0 }}>
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* ── Touren Tab ── */
+            rideRoutes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                <p style={{ fontSize: '40px', marginBottom: '12px' }}>🗺️</p>
+                <p style={{ color: t.muted, fontSize: '14px', fontFamily: "'Barlow', sans-serif" }}>
+                  Noch keine Touren gespeichert
+                </p>
+              </div>
+            ) : (
+              rideRoutes.map(route => (
+                <div
+                  key={route.id}
+                  onClick={() => onSelectRoute(route)}
+                  style={{
+                    background: t.bg, border: `1px solid ${t.border}`,
+                    borderRadius: '12px', padding: '14px', marginBottom: '10px',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent-primary)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = t.border; e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '15px', fontWeight: 600, color: t.text, margin: '0 0 4px', fontFamily: "'Barlow', sans-serif" }}>
+                        {route.name || route.title || 'Unbenannte Tour'}
+                      </p>
+                      <p style={{ color: t.muted, fontSize: '12px', margin: 0, fontFamily: "'Barlow', sans-serif" }}>
+                        {new Date(route.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {route.duration_secs ? ` · ${fmt(route.duration_secs)}` : ''}
+                        {route.max_speed ? ` · Max ${route.max_speed} km/h` : ''}
+                      </p>
+                    </div>
+                    {route.distance_km != null && (
+                      <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-accent-primary)', margin: '0 0 0 12px', fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: 'nowrap' }}>
+                        {route.distance_km} km
+                      </p>
+                    )}
+                  </div>
+                  {/* Mini-Stats Zeile */}
+                  {(route.avg_speed || route.max_speed) && (
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${t.border}` }}>
+                      {route.avg_speed > 0 && (
+                        <span style={{ color: '#facc15', fontSize: '11px', fontWeight: 600, fontFamily: "'Barlow', sans-serif" }}>
+                          ⌀ {route.avg_speed} km/h
+                        </span>
+                      )}
+                      {route.max_speed > 0 && (
+                        <span style={{ color: '#f43f5e', fontSize: '11px', fontWeight: 600, fontFamily: "'Barlow', sans-serif" }}>
+                          ⚡ {route.max_speed} km/h
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )
           )}
         </div>
       </div>

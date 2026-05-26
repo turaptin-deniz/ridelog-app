@@ -563,17 +563,6 @@ function App() {
                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.06)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                {/* Tire / wheel icon — 6 spokes */}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2"/>
-                  <circle cx="12" cy="12" r="2.5" fill="white"/>
-                  <line x1="12" y1="3"    x2="12"   y2="8.5"  stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="19.8" y1="7.5" x2="15"  y2="10.3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="19.8" y1="16.5" x2="15" y2="13.7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="12" y1="21"   x2="12"   y2="15.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="4.2" y1="16.5" x2="9"   y2="13.7" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="4.2" y1="7.5"  x2="9"   y2="10.3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
               </button>
             </div>
           </div>

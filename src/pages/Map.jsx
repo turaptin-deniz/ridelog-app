@@ -271,8 +271,8 @@ export default function Map({
             style={{
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '7px 10px 7px 12px',
-              background: isOnline ? 'rgba(74,222,128,0.14)' : 'rgba(0,0,0,0.82)',
-              border: `1px solid ${isOnline ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.1)'}`,
+              background: 'rgba(0,0,0,0.82)',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '50px',
               backdropFilter: 'blur(6px)',
               cursor: onlineLoading ? 'wait' : 'pointer',
