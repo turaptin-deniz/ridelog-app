@@ -7,6 +7,7 @@ import Feed from './pages/Feed'
 import Profile from './pages/Profile'
 import Messages from './pages/Messages'
 import Discover from './pages/Discover'
+import UserProfile from './pages/UserProfile'
 import CreateMenu from './components/CreateMenu'
 import { useTranslation } from './i18n'
 
@@ -280,8 +281,14 @@ function App() {
   if (!session) return <Login onLogin={() => {}} darkMode={darkMode} setDarkMode={setDarkMode} />
 
   // Navigate to another user's profile from anywhere
-  const navigateToProfile = () => {
-    setActivePage('profil')
+  const [viewingUserId, setViewingUserId] = useState(null)
+  const [prevPage, setPrevPage] = useState(null)
+
+  const navigateToProfile = (userId) => {
+    if (!userId) return
+    setPrevPage(activePage)
+    setViewingUserId(userId)
+    setActivePage('userprofile')
   }
 
   // ── Map props (shared ride state) ─────────────────────────────────────────
@@ -294,6 +301,20 @@ function App() {
   }
 
   const renderPage = () => {
+    // Fremdes Profil — hat Vorrang vor allem anderen
+    if (activePage === 'userprofile' && viewingUserId) {
+      return (
+        <UserProfile
+          userId={viewingUserId}
+          darkMode={darkMode}
+          onBack={() => {
+            setViewingUserId(null)
+            setActivePage(prevPage || 'discover')
+          }}
+        />
+      )
+    }
+
     if (searchQuery.trim().length > 0) {
       return (
         <Discover
