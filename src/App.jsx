@@ -84,7 +84,11 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
+    const sizes = { sm: '13px', md: '15px', lg: '17px' }
     document.documentElement.dataset.fontSize = fontSize
+    // Set inline style on <html> so rem-based values scale immediately.
+    // Inline style has highest specificity and overrides all CSS rules.
+    document.documentElement.style.fontSize = sizes[fontSize] || '15px'
     localStorage.setItem('revmeet-fontsize', fontSize)
   }, [fontSize])
 

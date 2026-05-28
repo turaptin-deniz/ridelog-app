@@ -156,15 +156,16 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 15px;  /* root font-size — rem values scale relative to this */
 }
 
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-family: var(--font-family-primary);
-  font-size: 15px;               /* ↑ slightly larger default */
+  font-size: 1em;   /* inherits from html so font-size setting cascades */
   line-height: var(--line-height-normal);
-  font-weight: 500;              /* ↑ medium weight by default for better readability */
+  font-weight: 500;
 }
 
 /* ====================================================================
@@ -533,28 +534,13 @@ label {
    RESPONSIVE UTILITIES
    ==================================================================== */
 
-/* ── Font-size scale controlled by data-font-size on <html> ── */
-[data-font-size="sm"] body { font-size: 13px; }
-[data-font-size="md"] body { font-size: 15px; }   /* default */
-[data-font-size="lg"] body { font-size: 17px; }
-
-@media (max-width: 479px) {
-  /* Mobile: respect font-size setting, no hard override */
-}
-
-@media (min-width: 640px) {
-  /* Tablet and up */
-  body {
-    font-size: var(--font-size-base);
-  }
-}
-
-@media (min-width: 1024px) {
-  /* Desktop and up */
-  body {
-    font-size: var(--font-size-lg);
-  }
-}
+/* ── Font-size scale controlled by data-font-size on <html> ──
+   Targeting html (not body!) so rem values scale correctly.
+   JS also sets document.documentElement.style.fontSize for
+   immediate application without waiting for CSS specificity. ── */
+[data-font-size="sm"] { font-size: 13px !important; }
+[data-font-size="md"] { font-size: 15px !important; }   /* default */
+[data-font-size="lg"] { font-size: 17px !important; }
 
 /* ====================================================================
    UTILITIES
