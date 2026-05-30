@@ -46,6 +46,10 @@ function App() {
   // ── User profile navigation ───────────────────────────────────────────────
   const [viewingUserId, setViewingUserId] = useState(null)
   const [prevPage, setPrevPage] = useState(null)
+
+  // ── Legal modals ──────────────────────────────────────────────────────────
+  const [showImpressum, setShowImpressum] = useState(false)
+  const [showAGB, setShowAGB] = useState(false)
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
 
   const watchRef = useRef(null)
@@ -699,6 +703,8 @@ function App() {
               {[
                 { label: T('settings_privacy'), icon: '🔒', action: () => {} },
                 { label: T('settings_language'), icon: '🌍', action: () => setShowLanguage(true) },
+                { label: 'Impressum', icon: '📋', action: () => { setShowSettings(false); setShowImpressum(true) } },
+                { label: 'AGB', icon: '📄', action: () => { setShowSettings(false); setShowAGB(true) } },
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{
                   width: '100%', background: t.bg, border: `1px solid ${t.border}`,
@@ -780,6 +786,124 @@ function App() {
                   {selectedLanguage === lang.id && <span style={{ color: t.accent, fontSize: '16px' }}>✓</span>}
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Impressum Modal ──────────────────────────────────────────── */}
+        {showImpressum && (
+          <div onClick={() => setShowImpressum(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 2100, backdropFilter: 'blur(4px)' }} className="animate-fadeIn">
+            <div onClick={e => e.stopPropagation()} style={{ background: t.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '480px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', border: `1px solid ${t.border}`, boxShadow: '0 -8px 40px rgba(0,0,0,0.4)' }} className="animate-scaleIn">
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+                <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: t.border }} />
+              </div>
+              {/* Header */}
+              <div style={{ padding: '8px 20px 16px', borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ color: t.text, fontSize: '20px', fontWeight: '800', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.03em', margin: 0 }}>IMPRESSUM</h3>
+                <button onClick={() => setShowImpressum(false)} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: t.muted, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+              {/* Content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', lineHeight: '1.7' }}>
+                <p style={{ color: t.muted, fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Angaben gemäß § 5 TMG</p>
+                <p style={{ color: t.text, fontSize: '14px', marginBottom: '20px', fontFamily: "'Barlow', sans-serif" }}>
+                  <strong>[PLATZHALTER — Vor- und Nachname]</strong><br />
+                  [Straße und Hausnummer]<br />
+                  [PLZ] [Ort]<br />
+                  Deutschland
+                </p>
+
+                <p style={{ color: t.muted, fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Kontakt</p>
+                <p style={{ color: t.text, fontSize: '14px', marginBottom: '20px', fontFamily: "'Barlow', sans-serif" }}>
+                  E-Mail: [PLATZHALTER — email@beispiel.de]
+                </p>
+
+                <p style={{ color: t.muted, fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Verantwortlich für den Inhalt (§ 55 Abs. 2 RStV)</p>
+                <p style={{ color: t.text, fontSize: '14px', marginBottom: '20px', fontFamily: "'Barlow', sans-serif" }}>
+                  [PLATZHALTER — Vor- und Nachname]<br />
+                  [Adresse wie oben]
+                </p>
+
+                <p style={{ color: t.muted, fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Haftungsausschluss</p>
+                <p style={{ color: t.text, fontSize: '13px', marginBottom: '20px', fontFamily: "'Barlow', sans-serif" }}>
+                  Die Inhalte dieser App wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte nach den allgemeinen Gesetzen verantwortlich.
+                </p>
+
+                <p style={{ color: t.muted, fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Urheberrecht</p>
+                <p style={{ color: t.text, fontSize: '13px', marginBottom: '32px', fontFamily: "'Barlow', sans-serif" }}>
+                  Die durch den Betreiber erstellten Inhalte und Werke in dieser App unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des Betreibers.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── AGB Modal ────────────────────────────────────────────────── */}
+        {showAGB && (
+          <div onClick={() => setShowAGB(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 2100, backdropFilter: 'blur(4px)' }} className="animate-fadeIn">
+            <div onClick={e => e.stopPropagation()} style={{ background: t.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: '480px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', border: `1px solid ${t.border}`, boxShadow: '0 -8px 40px rgba(0,0,0,0.4)' }} className="animate-scaleIn">
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+                <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: t.border }} />
+              </div>
+              {/* Header */}
+              <div style={{ padding: '8px 20px 16px', borderBottom: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ color: t.text, fontSize: '20px', fontWeight: '800', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.03em', margin: 0 }}>ALLGEMEINE GESCHÄFTSBEDINGUNGEN</h3>
+                <button onClick={() => setShowAGB(false)} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: t.muted, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+              {/* Content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px', lineHeight: '1.7' }}>
+                {[
+                  {
+                    title: '§ 1 Geltungsbereich',
+                    text: 'Diese Allgemeinen Geschäftsbedingungen gelten für die Nutzung der mobilen Anwendung RideLog. Mit der Registrierung und Nutzung der App erklärt der Nutzer sein Einverständnis mit diesen Bedingungen.'
+                  },
+                  {
+                    title: '§ 2 Leistungsbeschreibung',
+                    text: 'RideLog ist eine Plattform für Motorradfahrer zur Aufzeichnung von Touren, zum Austausch mit anderen Fahrern sowie zur Verwaltung von Fahrzeugen und Routen. Die Nutzung der Grundfunktionen ist kostenlos.'
+                  },
+                  {
+                    title: '§ 3 Registrierung und Nutzerkonto',
+                    text: 'Zur Nutzung der App ist eine Registrierung erforderlich. Der Nutzer ist verpflichtet, wahrheitsgemäße Angaben zu machen und seine Zugangsdaten vertraulich zu behandeln. Eine Weitergabe des Kontos an Dritte ist nicht gestattet.'
+                  },
+                  {
+                    title: '§ 4 Nutzerverhalten',
+                    text: 'Der Nutzer verpflichtet sich, keine rechtswidrigen, beleidigenden oder anderweitig anstößigen Inhalte zu veröffentlichen. Das Erstellen von Fake-Profilen oder das Missbrauchen der Plattform ist untersagt. Verstöße können zur Sperrung des Kontos führen.'
+                  },
+                  {
+                    title: '§ 5 Inhalte und Urheberrecht',
+                    text: 'Vom Nutzer hochgeladene Inhalte (Fotos, Texte, Routen) bleiben dessen Eigentum. Der Nutzer räumt RideLog jedoch das Recht ein, diese Inhalte im Rahmen des Betriebs der Plattform zu nutzen und anzuzeigen.'
+                  },
+                  {
+                    title: '§ 6 Datenschutz',
+                    text: 'Die Erhebung und Verarbeitung personenbezogener Daten erfolgt gemäß der geltenden Datenschutzgrundverordnung (DSGVO). Standortdaten werden nur während aktiver Fahrten erfasst und nicht dauerhaft gespeichert. Details entnehmen Sie bitte unserer Datenschutzerklärung.'
+                  },
+                  {
+                    title: '§ 7 Haftungsbeschränkung',
+                    text: 'RideLog übernimmt keine Haftung für die Richtigkeit von Streckendaten oder Navigationshinweisen. Die Nutzung der App im Straßenverkehr erfolgt auf eigene Gefahr. Für Schäden, die durch die Nutzung der App entstehen, haftet der Betreiber nur bei grober Fahrlässigkeit oder Vorsatz.'
+                  },
+                  {
+                    title: '§ 8 Verfügbarkeit',
+                    text: 'Ein Anspruch auf ununterbrochene Verfügbarkeit der App besteht nicht. Wartungsarbeiten und technisch bedingte Ausfälle können zu vorübergehenden Einschränkungen führen.'
+                  },
+                  {
+                    title: '§ 9 Änderungen der AGB',
+                    text: 'Der Betreiber behält sich vor, diese AGB jederzeit zu ändern. Über wesentliche Änderungen werden Nutzer per App-Benachrichtigung informiert. Die fortgesetzte Nutzung der App nach Änderungen gilt als Zustimmung zu den neuen Bedingungen.'
+                  },
+                  {
+                    title: '§ 10 Anwendbares Recht',
+                    text: 'Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist der Sitz des Betreibers, soweit gesetzlich zulässig.'
+                  },
+                ].map(section => (
+                  <div key={section.title} style={{ marginBottom: '20px' }}>
+                    <p style={{ color: t.text, fontSize: '13px', fontWeight: '700', fontFamily: "'Barlow', sans-serif", marginBottom: '4px' }}>{section.title}</p>
+                    <p style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>{section.text}</p>
+                  </div>
+                ))}
+                <p style={{ color: t.muted, fontSize: '11px', marginTop: '8px', marginBottom: '32px', fontFamily: "'Barlow', sans-serif" }}>
+                  Stand: {new Date().toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                </p>
+              </div>
             </div>
           </div>
         )}
