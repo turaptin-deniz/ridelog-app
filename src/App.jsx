@@ -352,7 +352,7 @@ function App() {
           />
         )
       case 'feed':
-        return <Feed darkMode={darkMode} lang={selectedLanguage} />
+        return <Feed darkMode={darkMode} lang={selectedLanguage} onSelectUser={navigateToProfile} />
       case 'messages':
         return <Messages darkMode={darkMode} lang={selectedLanguage} />
       case 'profil':
