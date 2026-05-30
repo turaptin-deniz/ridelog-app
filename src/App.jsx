@@ -577,17 +577,27 @@ function App() {
           display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
           background: t.surface, flexShrink: 0,
         }}>
-          {/* Logo */}
+          {/* Logo — Speedometer symbol */}
           <svg width="36" height="36" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-            <rect width="32" height="32" fill="#0B0BB8"/>
-            <circle cx="16" cy="16" r="13.5" fill="white"/>
-            <text x="16" y="22.5"
-              textAnchor="middle"
-              fontFamily="Impact, 'Arial Black', Arial, sans-serif"
-              fontWeight="900"
-              fontSize="18"
-              fill="#CC0000"
-              letterSpacing="-0.5">RL</text>
+            <defs>
+              <linearGradient id="rl-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#0f172a"/>
+                <stop offset="100%" stopColor="#020617"/>
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="8" fill="url(#rl-bg)"/>
+            {/* Track */}
+            <path d="M 11 26.7 A 10 10 0 1 1 21 26.7"
+              stroke="#1e293b" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            {/* Active zone */}
+            <path d="M 11 26.7 A 10 10 0 1 1 25.4 14.6"
+              stroke="#3b82f6" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            {/* Needle */}
+            <line x1="16" y1="18" x2="23.5" y2="15.3"
+              stroke="#f43f5e" strokeWidth="2.2" strokeLinecap="round"/>
+            {/* Hub */}
+            <circle cx="16" cy="18" r="2.2" fill="#0f172a" stroke="#3b82f6" strokeWidth="1.5"/>
+            <circle cx="16" cy="18" r="0.9" fill="white"/>
           </svg>
 
           {/* Search field */}
