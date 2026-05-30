@@ -448,10 +448,10 @@ function App() {
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', background: 'var(--color-bg-secondary)', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', background: 'var(--color-bg-secondary)', height: '100vh', overflow: 'hidden' }}>
       <div style={{
         width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column',
-        minHeight: '100vh', background: t.bg, position: 'relative',
+        height: '100vh', background: t.bg, position: 'relative',
         boxShadow: '0 0 60px rgba(0,0,0,0.4)',
       }}>
 
