@@ -577,22 +577,26 @@ function App() {
           display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
           background: t.surface, flexShrink: 0,
         }}>
-          {/* Logo — RL Monogram */}
+          {/* Logo — RL + Road element */}
           <svg width="36" height="36" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
             <defs>
               <linearGradient id="rl-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#2563eb"/>
-                <stop offset="100%" stopColor="#0c1445"/>
+                <stop offset="0%" stopColor="#0f172a"/>
+                <stop offset="100%" stopColor="#020617"/>
               </linearGradient>
             </defs>
-            <rect width="32" height="32" rx="7" fill="url(#rl-bg)"/>
-            <rect x="5.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
-            <rect x="8.3" y="8.5" width="4.5" height="2.8" rx="1.4" fill="white"/>
-            <rect x="12.8" y="8.5" width="2.8" height="5.5" rx="1.4" fill="white"/>
-            <rect x="8.3" y="13.5" width="4.5" height="2.5" rx="1.25" fill="white"/>
-            <rect x="11" y="15.5" width="2.8" height="8.5" rx="1.4" fill="white" transform="rotate(16 12.4 19.75)"/>
-            <rect x="18.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
-            <rect x="18.5" y="21" width="8" height="2.5" rx="1.25" fill="white"/>
+            {/* Background */}
+            <rect width="32" height="32" rx="8" fill="url(#rl-bg)"/>
+            {/* Ride element — road curve (swoosh) */}
+            <path d="M 2 29 Q 16 22 30 29" stroke="#3b82f6" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55"/>
+            {/* Speed dot — center of road = vanishing point */}
+            <circle cx="16" cy="22.5" r="1.5" fill="#3b82f6" opacity="0.9"/>
+            {/* R — smooth bezier strokes */}
+            <path d="M 6 7 L 6 23" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+            <path d="M 6 7 C 6 7 15.5 7 15.5 12 C 15.5 17 6 17 6 17" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M 11.5 17 L 16.5 23" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+            {/* L — smooth strokes */}
+            <path d="M 19.5 7 L 19.5 23 L 27 23" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
 
           {/* Search field */}

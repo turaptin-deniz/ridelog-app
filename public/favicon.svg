@@ -1,29 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#0c1445"/>
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
 
-  <!-- Letter R -->
-  <!-- vertical bar -->
-  <rect x="5.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
-  <!-- top of bowl -->
-  <rect x="8.3" y="8.5" width="4.5" height="2.8" rx="1.4" fill="white"/>
-  <!-- right side of bowl -->
-  <rect x="12.8" y="8.5" width="2.8" height="5.5" rx="1.4" fill="white"/>
-  <!-- mid bar of bowl -->
-  <rect x="8.3" y="13.5" width="4.5" height="2.5" rx="1.25" fill="white"/>
-  <!-- diagonal leg -->
-  <rect x="11" y="15.5" width="2.8" height="8.5" rx="1.4" fill="white" transform="rotate(16 12.4 19.75)"/>
+  <!-- Ride element — road curve swoosh -->
+  <path d="M 2 29 Q 16 22 30 29" stroke="#3b82f6" stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.55"/>
 
-  <!-- Letter L -->
-  <!-- vertical bar -->
-  <rect x="18.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
-  <!-- bottom bar -->
-  <rect x="18.5" y="21" width="8" height="2.5" rx="1.25" fill="white"/>
+  <!-- Speed dot — vanishing point -->
+  <circle cx="16" cy="22.5" r="1.5" fill="#3b82f6" opacity="0.9"/>
+
+  <!-- R — smooth bezier strokes -->
+  <path d="M 6 7 L 6 23" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 6 7 C 6 7 15.5 7 15.5 12 C 15.5 17 6 17 6 17" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 11.5 17 L 16.5 23" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- L — smooth strokes -->
+  <path d="M 19.5 7 L 19.5 23 L 27 23" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
