@@ -577,22 +577,23 @@ function App() {
           display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
           background: t.surface, flexShrink: 0,
         }}>
-          {/* Logo */}
-          <div style={{
-            width: '36px', height: '36px',
-            background: `linear-gradient(135deg, ${t.accent} 0%, var(--color-accent-secondary) 100%)`,
-            borderRadius: 'var(--radius-md)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(59, 130, 246, 0.25)',
-            flexShrink: 0,
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="5.5" cy="17.5" r="3" stroke="white" strokeWidth="1.8"/>
-              <circle cx="18.5" cy="17.5" r="3" stroke="white" strokeWidth="1.8"/>
-              <path d="M5.5 17.5L8 10L12 9L15 6H18L19.5 9L21 11L18.5 17.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M8 10L12 11L15 10" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </div>
+          {/* Logo — RL Monogram */}
+          <svg width="36" height="36" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <defs>
+              <linearGradient id="rl-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#2563eb"/>
+                <stop offset="100%" stopColor="#0c1445"/>
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="7" fill="url(#rl-bg)"/>
+            <rect x="5.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
+            <rect x="8.3" y="8.5" width="4.5" height="2.8" rx="1.4" fill="white"/>
+            <rect x="12.8" y="8.5" width="2.8" height="5.5" rx="1.4" fill="white"/>
+            <rect x="8.3" y="13.5" width="4.5" height="2.5" rx="1.25" fill="white"/>
+            <rect x="11" y="15.5" width="2.8" height="8.5" rx="1.4" fill="white" transform="rotate(16 12.4 19.75)"/>
+            <rect x="18.5" y="8.5" width="2.8" height="15" rx="1.4" fill="white"/>
+            <rect x="18.5" y="21" width="8" height="2.5" rx="1.25" fill="white"/>
+          </svg>
 
           {/* Search field */}
           <div style={{
