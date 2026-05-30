@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import RouteDetail from '../components/RouteDetail'
+import PostTypeBody from '../components/PostTypeBody'
 
 const isVideoUrl = url => url && /\.(mp4|mov|webm)/i.test(url)
 
@@ -14,11 +15,12 @@ function formatTime(dateStr) {
 }
 
 // ── PostCard ─────────────────────────────────────────────────────────────────
-function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick }) {
+function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick, currentUserId, onVote, onParticipate, onToggleSold, onContactSeller }) {
   const [slideIdx, setSlideIdx] = useState(0)
   const photos = post.photos || []
   const hasMedia = photos.length > 0
   const displayName = post.profiles?.display_name || post.profiles?.username || '??'
+  const isTyped = post.post_type && post.post_type !== 'standard'
 
   const ActionBtn = ({ onClick, active, activeColor, children, count }) => (
     <button
@@ -82,8 +84,21 @@ function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick }) {
             <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '17px', marginLeft: 'auto', padding: '0 4px', lineHeight: 1 }}>···</button>
           </div>
 
-          {/* Text-Content */}
-          {post.content && (
+          {/* Typed post body (route_tip, poll, marketplace, …) */}
+          {isTyped && (
+            <PostTypeBody
+              post={post}
+              t={t}
+              currentUserId={currentUserId}
+              onVote={onVote}
+              onParticipate={onParticipate}
+              onToggleSold={onToggleSold}
+              onContactSeller={onContactSeller}
+            />
+          )}
+
+          {/* Text-Content (standard posts only) */}
+          {!isTyped && post.content && (
             <p style={{
               fontSize: '15px', lineHeight: '1.55', color: t.text,
               fontFamily: "'Barlow', sans-serif",
@@ -257,7 +272,7 @@ export default function Feed({ darkMode, onSelectUser }) {
   }, [activeTab])
 
   const loadPosts = async (userId) => {
-    const { data } = await supabase.from('posts').select('*, profiles(id, username, avatar_url)').order('created_at', { ascending: false })
+    const { data } = await supabase.from('posts').select('*, profiles(id, username, display_name, avatar_url)').order('created_at', { ascending: false })
     if (data) {
       const withMeta = await Promise.all(data.map(async (post) => {
         const [{ data: like }, { data: repost }, { count: likeCount }, { count: commentCount }, { count: repostCount }] = await Promise.all([
@@ -267,7 +282,32 @@ export default function Feed({ darkMode, onSelectUser }) {
           supabase.from('comments').select('id', { count: 'exact' }).eq('post_id', post.id),
           supabase.from('reposts').select('id', { count: 'exact' }).eq('post_id', post.id),
         ])
-        return { ...post, liked: !!like, reposted: !!repost, like_count: likeCount || 0, comment_count: commentCount || 0, repost_count: repostCount || 0 }
+
+        // Poll vote tallies + this user's vote
+        let poll = null
+        if (post.post_type === 'poll') {
+          try {
+            const { data: votes } = await supabase.from('poll_votes').select('option_index, user_id').eq('post_id', post.id)
+            const counts = {}
+            let myVote = null
+            ;(votes || []).forEach(v => {
+              counts[v.option_index] = (counts[v.option_index] || 0) + 1
+              if (v.user_id === userId) myVote = v.option_index
+            })
+            poll = { counts, myVote, total: votes?.length || 0 }
+          } catch { poll = { counts: {}, myVote: null, total: 0 } }
+        }
+
+        // Participation counts (ride_buddy + challenge)
+        let participation = null
+        if (post.post_type === 'ride_buddy' || post.post_type === 'challenge') {
+          try {
+            const { data: parts } = await supabase.from('post_participants').select('user_id').eq('post_id', post.id)
+            participation = { count: parts?.length || 0, joined: (parts || []).some(p => p.user_id === userId) }
+          } catch { participation = { count: 0, joined: false } }
+        }
+
+        return { ...post, liked: !!like, reposted: !!repost, like_count: likeCount || 0, comment_count: commentCount || 0, repost_count: repostCount || 0, poll, participation }
       }))
       setPosts(withMeta)
     }
@@ -294,6 +334,64 @@ export default function Feed({ darkMode, onSelectUser }) {
     else { await supabase.from('reposts').insert({ user_id: currentUser.id, post_id: post.id }) }
     setPosts(posts.map(p => p.id === post.id ? { ...p, reposted: !p.reposted, repost_count: p.repost_count + (p.reposted ? -1 : 1) } : p))
     window.dispatchEvent(new CustomEvent('ridelog:repost-changed'))
+  }
+
+  // ── Poll voting ───────────────────────────────────────────────────────────
+  const votePoll = async (post, optionIndex) => {
+    if (!currentUser) return
+    const prev = post.poll?.myVote
+    if (prev === optionIndex) return // no change
+    // Optimistic update
+    setPosts(posts.map(p => {
+      if (p.id !== post.id) return p
+      const counts = { ...(p.poll?.counts || {}) }
+      if (prev !== null && prev !== undefined) counts[prev] = Math.max(0, (counts[prev] || 0) - 1)
+      counts[optionIndex] = (counts[optionIndex] || 0) + 1
+      const total = Object.values(counts).reduce((a, b) => a + b, 0)
+      return { ...p, poll: { counts, myVote: optionIndex, total } }
+    }))
+    try {
+      await supabase.from('poll_votes').upsert(
+        { post_id: post.id, user_id: currentUser.id, option_index: optionIndex },
+        { onConflict: 'post_id,user_id' }
+      )
+    } catch (e) { console.error('votePoll:', e) }
+  }
+
+  // ── Participate (ride_buddy + challenge) ──────────────────────────────────
+  const toggleParticipate = async (post) => {
+    if (!currentUser) return
+    const joined = post.participation?.joined
+    setPosts(posts.map(p => p.id === post.id
+      ? { ...p, participation: { count: Math.max(0, (p.participation?.count || 0) + (joined ? -1 : 1)), joined: !joined } }
+      : p))
+    try {
+      if (joined) {
+        await supabase.from('post_participants').delete().eq('post_id', post.id).eq('user_id', currentUser.id)
+      } else {
+        await supabase.from('post_participants').insert({ post_id: post.id, user_id: currentUser.id })
+        if (post.profiles?.id && post.profiles.id !== currentUser.id) {
+          supabase.from('notifications').insert({
+            recipient_id: post.profiles.id, sender_id: currentUser.id,
+            type: post.post_type === 'challenge' ? 'challenge_join' : 'ride_join', post_id: post.id
+          }).then(() => {})
+        }
+      }
+    } catch (e) { console.error('toggleParticipate:', e) }
+  }
+
+  // ── Marketplace: toggle sold (owner only) ─────────────────────────────────
+  const toggleSold = async (post) => {
+    if (!currentUser || post.profiles?.id !== currentUser.id) return
+    const newMeta = { ...(post.metadata || {}), sold: !post.metadata?.sold }
+    setPosts(posts.map(p => p.id === post.id ? { ...p, metadata: newMeta } : p))
+    try {
+      await supabase.from('posts').update({ metadata: newMeta }).eq('id', post.id)
+    } catch (e) { console.error('toggleSold:', e) }
+  }
+
+  const contactSeller = (post) => {
+    onSelectUser?.(post.profiles?.id)
   }
 
   // ── Open comment sheet ────────────────────────────────────────────────────
@@ -404,6 +502,11 @@ export default function Feed({ darkMode, onSelectUser }) {
                 onComment={openComments}
                 onRepost={toggleRepost}
                 onProfileClick={onSelectUser}
+                currentUserId={currentUser?.id}
+                onVote={votePoll}
+                onParticipate={toggleParticipate}
+                onToggleSold={toggleSold}
+                onContactSeller={contactSeller}
               />
             ))}
           </>
