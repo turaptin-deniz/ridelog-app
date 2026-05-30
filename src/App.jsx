@@ -577,26 +577,17 @@ function App() {
           display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
           background: t.surface, flexShrink: 0,
         }}>
-          {/* Logo — RL + Road element */}
+          {/* Logo */}
           <svg width="36" height="36" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-            <defs>
-              <linearGradient id="rl-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#0f172a"/>
-                <stop offset="100%" stopColor="#020617"/>
-              </linearGradient>
-            </defs>
-            {/* Background */}
-            <rect width="32" height="32" rx="8" fill="url(#rl-bg)"/>
-            {/* Ride element — road curve (swoosh) */}
-            <path d="M 2 29 Q 16 22 30 29" stroke="#3b82f6" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.55"/>
-            {/* Speed dot — center of road = vanishing point */}
-            <circle cx="16" cy="22.5" r="1.5" fill="#3b82f6" opacity="0.9"/>
-            {/* R — smooth bezier strokes */}
-            <path d="M 6 7 L 6 23" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-            <path d="M 6 7 C 6 7 15.5 7 15.5 12 C 15.5 17 6 17 6 17" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M 11.5 17 L 16.5 23" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-            {/* L — smooth strokes */}
-            <path d="M 19.5 7 L 19.5 23 L 27 23" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <rect width="32" height="32" fill="#0B0BB8"/>
+            <circle cx="16" cy="16" r="13.5" fill="white"/>
+            <text x="16" y="22.5"
+              textAnchor="middle"
+              fontFamily="Impact, 'Arial Black', Arial, sans-serif"
+              fontWeight="900"
+              fontSize="18"
+              fill="#CC0000"
+              letterSpacing="-0.5">RL</text>
           </svg>
 
           {/* Search field */}
