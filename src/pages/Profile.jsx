@@ -1078,9 +1078,9 @@ const toggleFollow = async () => {
             </p>
 
             {[
-              { label: '🏍️ Motorrad', badges: MOTO_BADGES },
-              { label: '🚗 Auto', badges: CAR_BADGES },
-              { label: '🌍 Allgemein', badges: GENERAL_BADGES },
+              { label: 'Motorrad', badges: MOTO_BADGES },
+              { label: 'Auto', badges: CAR_BADGES },
+              { label: 'Allgemein', badges: GENERAL_BADGES },
             ].map(section => (
               <div key={section.label} style={{ marginBottom: '20px' }}>
                 <p style={{ color: t.muted, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', fontFamily: "'Barlow', sans-serif", display: 'flex', alignItems: 'center', gap: '6px' }}>

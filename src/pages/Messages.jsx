@@ -493,8 +493,9 @@ export default function Messages({ darkMode }) {
           <h2 style={{ color: t.text, fontSize: '18px', fontWeight: '700', fontFamily: "'Barlow Condensed', sans-serif" }}>Nachrichten</h2>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {requests.length > 0 && (
-              <button onClick={() => setView('requests')} style={{ background: '#3b82f622', border: '1px solid #3b82f644', color: '#3b82f6', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600' }}>
-                📨 {requests.length}
+              <button onClick={() => setView('requests')} style={{ background: '#3b82f622', border: '1px solid #3b82f644', color: '#3b82f6', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                {requests.length}
               </button>
             )}
             {/* Create group button */}
@@ -528,7 +529,7 @@ export default function Messages({ darkMode }) {
                     </div>
                     <div>
                       <p style={{ color: t.text, fontSize: '13px', fontWeight: '600', fontFamily: "'Barlow', sans-serif" }}>@{user.username}</p>
-                      <p style={{ color: t.muted, fontSize: '11px' }}>{user.is_online ? '🟢 Online' : 'Offline'}</p>
+                      <p style={{ color: t.muted, fontSize: '11px' }}>{user.is_online ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />Online</span> : 'Offline'}</p>
                     </div>
                   </div>
                 ))}
