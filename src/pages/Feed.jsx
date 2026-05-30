@@ -17,106 +17,148 @@ function formatTime(dateStr) {
 function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick }) {
   const [slideIdx, setSlideIdx] = useState(0)
   const photos = post.photos || []
+  const hasMedia = photos.length > 0
+  const displayName = post.profiles?.display_name || post.profiles?.username || '??'
+
+  const ActionBtn = ({ onClick, active, activeColor, children, count }) => (
+    <button
+      onClick={onClick}
+      className="btn-press"
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '5px',
+        color: active ? activeColor : t.muted,
+        fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600',
+        padding: '7px 10px', borderRadius: '50px', transition: 'all 0.15s',
+        minWidth: '44px'
+      }}
+    >
+      {children}
+      {count > 0 && <span style={{ fontSize: '13px', lineHeight: 1 }}>{count}</span>}
+    </button>
+  )
 
   return (
-    <div style={{ borderBottom: `1px solid ${t.border}` }} className="animate-fadeIn">
+    <div style={{ borderBottom: `1px solid ${t.border}`, padding: '14px 16px 10px' }} className="animate-fadeIn">
+      <div style={{ display: 'flex', gap: '12px' }}>
 
-      {/* Header — avatar + name clickable → Profil */}
-      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div
-          onClick={() => onProfileClick?.(post.profiles?.id)}
-          style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: 'white', overflow: 'hidden', flexShrink: 0, cursor: 'pointer' }}
-        >
-          {post.profiles?.avatar_url
-            ? <img src={post.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-            : post.profiles?.username?.slice(0, 2).toUpperCase() || '??'}
-        </div>
-        <div style={{ flex: 1 }}>
-          <p
+        {/* ── Avatar ── */}
+        <div style={{ flexShrink: 0 }}>
+          <div
             onClick={() => onProfileClick?.(post.profiles?.id)}
-            style={{ fontWeight: '700', fontSize: '14px', color: t.text, fontFamily: "'Barlow', sans-serif", cursor: 'pointer', display: 'inline-block' }}
+            style={{
+              width: '46px', height: '46px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '15px', fontWeight: '800', color: 'white',
+              overflow: 'hidden', cursor: 'pointer', flexShrink: 0,
+              fontFamily: "'Barlow Condensed', sans-serif"
+            }}
           >
-            @{post.profiles?.username}
-          </p>
-          <p style={{ color: t.muted, fontSize: '11px' }}>{formatTime(post.created_at)}</p>
+            {post.profiles?.avatar_url
+              ? <img src={post.profiles.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+              : displayName.slice(0, 2).toUpperCase()}
+          </div>
         </div>
-        <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '18px' }}>···</button>
-      </div>
 
-      {/* Media carousel */}
-      {photos.length > 0 && (
-        <div style={{ position: 'relative', background: '#000', width: '100%' }}>
-          {isVideoUrl(photos[slideIdx])
-            ? <video src={photos[slideIdx]} controls style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }} />
-            : <img src={photos[slideIdx]} alt="" style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }} />
-          }
-          {photos.length > 1 && slideIdx > 0 && (
-            <button onClick={() => setSlideIdx(i => i - 1)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-          )}
-          {photos.length > 1 && slideIdx < photos.length - 1 && (
-            <button onClick={() => setSlideIdx(i => i + 1)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          )}
-          {photos.length > 1 && (
-            <>
-              <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px', alignItems: 'center' }}>
-                {photos.map((_, i) => (
-                  <div key={i} onClick={() => setSlideIdx(i)} style={{ height: '6px', width: i === slideIdx ? '18px' : '6px', borderRadius: '3px', background: i === slideIdx ? 'white' : 'rgba(255,255,255,0.45)', transition: 'width 0.2s ease', cursor: 'pointer' }} />
-                ))}
-              </div>
-              <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, color: 'white', fontFamily: "'Barlow', sans-serif" }}>
-                {slideIdx + 1} / {photos.length}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+        {/* ── Content column ── */}
+        <div style={{ flex: 1, minWidth: 0 }}>
 
-      {/* Caption */}
-      {post.content && (
-        <div style={{ padding: '10px 16px 4px' }}>
-          <p style={{ fontSize: '14px', lineHeight: '1.5', color: t.text, fontFamily: "'Barlow', sans-serif" }}>
+          {/* Header: Displayname · @handle · Zeit · ··· */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
             <span
               onClick={() => onProfileClick?.(post.profiles?.id)}
-              style={{ fontWeight: 700, marginRight: '6px', cursor: 'pointer' }}
+              style={{ fontWeight: '700', fontSize: '15px', color: t.text, fontFamily: "'Barlow', sans-serif", cursor: 'pointer', lineHeight: 1.2 }}
             >
+              {displayName}
+            </span>
+            <span style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>
               @{post.profiles?.username}
             </span>
-            {post.content}
-          </p>
-        </div>
-      )}
+            <span style={{ color: t.muted, fontSize: '13px' }}>·</span>
+            <span style={{ color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif" }}>
+              {formatTime(post.created_at)}
+            </span>
+            <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '17px', marginLeft: 'auto', padding: '0 4px', lineHeight: 1 }}>···</button>
+          </div>
 
-      {/* Actions */}
-      <div style={{ padding: '8px 16px 14px', display: 'flex', gap: '4px', alignItems: 'center' }}>
-        <button onClick={() => onLike(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: post.liked ? '#f43f5e' : t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked ? '#f43f5e' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
-          {post.like_count > 0 && post.like_count}
-        </button>
-        <button onClick={() => onComment(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          {post.comment_count > 0 && post.comment_count}
-        </button>
-        <button onClick={() => onRepost(post)} className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: post.reposted ? '#4ade80' : t.muted, fontSize: '13px', fontFamily: "'Barlow', sans-serif", fontWeight: '600', padding: '8px 12px', borderRadius: '8px', transition: 'all 0.15s' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-            <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-          </svg>
-          {post.repost_count > 0 && post.repost_count}
-        </button>
-        <button className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.muted, padding: '8px 12px', borderRadius: '8px', marginLeft: 'auto' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-          </svg>
-        </button>
+          {/* Text-Content */}
+          {post.content && (
+            <p style={{
+              fontSize: '15px', lineHeight: '1.55', color: t.text,
+              fontFamily: "'Barlow', sans-serif",
+              marginBottom: hasMedia ? '12px' : '0',
+              wordBreak: 'break-word'
+            }}>
+              {post.content}
+            </p>
+          )}
+
+          {/* Media carousel */}
+          {hasMedia && (
+            <div style={{ position: 'relative', background: '#000', borderRadius: '14px', overflow: 'hidden', marginTop: post.content ? '12px' : '4px' }}>
+              {isVideoUrl(photos[slideIdx])
+                ? <video src={photos[slideIdx]} controls style={{ width: '100%', maxHeight: '380px', objectFit: 'cover', display: 'block' }} />
+                : <img src={photos[slideIdx]} alt="" style={{ width: '100%', maxHeight: '380px', objectFit: 'cover', display: 'block' }} />
+              }
+              {photos.length > 1 && slideIdx > 0 && (
+                <button onClick={() => setSlideIdx(i => i - 1)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+              )}
+              {photos.length > 1 && slideIdx < photos.length - 1 && (
+                <button onClick={() => setSlideIdx(i => i + 1)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.55)', border: 'none', color: 'white', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              )}
+              {photos.length > 1 && (
+                <>
+                  <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    {photos.map((_, i) => (
+                      <div key={i} onClick={() => setSlideIdx(i)} style={{ height: '5px', width: i === slideIdx ? '16px' : '5px', borderRadius: '3px', background: i === slideIdx ? 'white' : 'rgba(255,255,255,0.45)', transition: 'width 0.2s ease', cursor: 'pointer' }} />
+                    ))}
+                  </div>
+                  <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', borderRadius: '20px', padding: '2px 8px', fontSize: '11px', fontWeight: 700, color: 'white', fontFamily: "'Barlow', sans-serif" }}>
+                    {slideIdx + 1} / {photos.length}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Action Bar ── */}
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px', marginLeft: '-10px', gap: '0' }}>
+            {/* Kommentar */}
+            <ActionBtn onClick={() => onComment(post)} count={post.comment_count}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </ActionBtn>
+
+            {/* Repost */}
+            <ActionBtn onClick={() => onRepost(post)} active={post.reposted} activeColor="#22c55e" count={post.repost_count}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </ActionBtn>
+
+            {/* Like */}
+            <ActionBtn onClick={() => onLike(post)} active={post.liked} activeColor="#f43f5e" count={post.like_count}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={post.liked ? '#f43f5e' : 'none'} stroke={post.liked ? '#f43f5e' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </ActionBtn>
+
+            {/* Teilen */}
+            <button className="btn-press" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: t.muted, padding: '7px 10px', borderRadius: '50px', marginLeft: 'auto' }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
