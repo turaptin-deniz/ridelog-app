@@ -72,6 +72,8 @@ export default function UserProfile({ userId, darkMode, onBack }) {
     } else {
       await supabase.from('follows').insert({ follower_id: currentUser.id, following_id: userId })
       setFollowers(prev => prev + 1)
+      // Notify followed user
+      supabase.from('notifications').insert({ recipient_id: userId, sender_id: currentUser.id, type: 'follow' }).then(() => {})
     }
     setIsFollowing(prev => !prev)
   }

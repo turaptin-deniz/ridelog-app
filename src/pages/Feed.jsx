@@ -234,8 +234,15 @@ export default function Feed({ darkMode, onSelectUser }) {
 
   const toggleLike = async (post) => {
     if (!currentUser) return
-    if (post.liked) { await supabase.from('likes').delete().eq('user_id', currentUser.id).eq('post_id', post.id) }
-    else { await supabase.from('likes').insert({ user_id: currentUser.id, post_id: post.id }) }
+    if (post.liked) {
+      await supabase.from('likes').delete().eq('user_id', currentUser.id).eq('post_id', post.id)
+    } else {
+      await supabase.from('likes').insert({ user_id: currentUser.id, post_id: post.id })
+      // Notify post author (not self)
+      if (post.profiles?.id && post.profiles.id !== currentUser.id) {
+        supabase.from('notifications').insert({ recipient_id: post.profiles.id, sender_id: currentUser.id, type: 'like', post_id: post.id }).then(() => {})
+      }
+    }
     setPosts(posts.map(p => p.id === post.id ? { ...p, liked: !p.liked, like_count: p.like_count + (p.liked ? -1 : 1) } : p))
   }
 
@@ -278,6 +285,10 @@ export default function Feed({ darkMode, onSelectUser }) {
       setComments(prev => [...prev, data])
       setPosts(posts.map(p => p.id === activeComments.id ? { ...p, comment_count: p.comment_count + 1 } : p))
       setNewComment('')
+      // Notify post author (not self)
+      if (activeComments.profiles?.id && activeComments.profiles.id !== currentUser.id) {
+        supabase.from('notifications').insert({ recipient_id: activeComments.profiles.id, sender_id: currentUser.id, type: 'comment', post_id: activeComments.id }).then(() => {})
+      }
     }
   }
 
