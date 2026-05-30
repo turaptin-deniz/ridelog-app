@@ -42,6 +42,10 @@ function App() {
   // ── Vehicle picker ────────────────────────────────────────────────────────
   const [myBikes, setMyBikes] = useState([])
   const [showVehiclePicker, setShowVehiclePicker] = useState(false)
+
+  // ── User profile navigation ───────────────────────────────────────────────
+  const [viewingUserId, setViewingUserId] = useState(null)
+  const [prevPage, setPrevPage] = useState(null)
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
 
   const watchRef = useRef(null)
@@ -281,9 +285,6 @@ function App() {
   if (!session) return <Login onLogin={() => {}} darkMode={darkMode} setDarkMode={setDarkMode} />
 
   // Navigate to another user's profile from anywhere
-  const [viewingUserId, setViewingUserId] = useState(null)
-  const [prevPage, setPrevPage] = useState(null)
-
   const navigateToProfile = (userId) => {
     if (!userId) return
     setPrevPage(activePage)
