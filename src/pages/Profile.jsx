@@ -188,9 +188,21 @@ export default function Profile({ darkMode, setDarkMode }) {
       repostList = rPosts || []
     }
 
-    setProfile(prof)
+    // Compute live stats from routes so historical tours are counted
+    // (profiles.total_km etc. is updated on save, but old tours may predate that)
+    const rts = routeData || []
+    const computed = {
+      total_km:     rts.reduce((s, r) => s + (r.distance_km || 0), 0),
+      total_rides:  rts.length,
+      max_speed:    rts.reduce((m, r) => Math.max(m, r.max_speed    || 0), 0),
+      longest_ride: rts.reduce((m, r) => Math.max(m, r.distance_km  || 0), 0),
+    }
+    // Merge computed stats into profile (prefer computed over DB values)
+    const mergedProf = prof ? { ...prof, ...computed } : prof
+
+    setProfile(mergedProf)
     setBikes(bikeData || [])
-    setRoutes(routeData || [])
+    setRoutes(rts)
     setEarnedBadges(badgeData?.map(b => b.type) || [])
     setUserPosts(postData || [])
     setUserReposts(repostList)

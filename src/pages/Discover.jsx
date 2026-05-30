@@ -64,6 +64,10 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
       await supabase.from('follows').insert({
         follower_id: currentUser.id, following_id: userId
       })
+      // Notify followed user
+      supabase.from('notifications').insert({
+        recipient_id: userId, sender_id: currentUser.id, type: 'follow'
+      }).then(() => {})
     }
     setFollowStates(prev => ({ ...prev, [userId]: !isFollowing }))
   }
@@ -72,10 +76,14 @@ export default function Discover({ darkMode, searchQuery: externalQuery, onSelec
     u.username?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const filteredRoutes = routes.filter(r =>
-    r.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.region?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredRoutes = routes.filter(r => {
+    const q = searchQuery.toLowerCase()
+    return (
+      r.name?.toLowerCase().includes(q) ||
+      r.title?.toLowerCase().includes(q) ||
+      r.profiles?.username?.toLowerCase().includes(q)
+    )
+  })
 
   const LEAGUES = [
     { id: 'bronze', label: 'Bronze', icon: '🥉', color: '#cd7f32', min: 0 },

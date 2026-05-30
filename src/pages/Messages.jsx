@@ -121,6 +121,8 @@ export default function Messages({ darkMode }) {
     await supabase.from('messages').insert({ sender_id: currentUser.id, receiver_id: activeChat.id, content: newMessage.trim() })
     setNewMessage('')
     loadConversations(currentUser.id)
+    // Notify recipient (graceful — notification table may not exist yet)
+    supabase.from('notifications').insert({ recipient_id: activeChat.id, sender_id: currentUser.id, type: 'message' }).then(() => {})
   }
 
   const acceptRequest = async (req) => {
