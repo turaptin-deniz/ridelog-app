@@ -7,8 +7,6 @@ const diffLabel = (d) => ({ easy: 'Leicht', medium: 'Mittel', hard: 'Schwer', ex
 const surfaceLabel = (s) => ({ asphalt: 'Asphalt', gravel: 'Schotter', mixed: 'Gemischt' }[s] || s)
 const paceLabel = (p) => ({ chill: 'Gemütlich', normal: 'Normal', sportlich: 'Sportlich' }[p] || p)
 const vehicleLabel = (v) => ({ all: 'Egal', motorrad: 'Motorrad', auto: 'Auto', sonstiges: 'Sonstiges' }[v] || v)
-const catLabel = (c) => ({ bike: 'Fahrzeug', parts: 'Teile', gear: 'Ausrüstung', other: 'Sonstiges' }[c] || c)
-const condLabel = (c) => ({ new: 'Neu', like_new: 'Wie neu', good: 'Gut', used: 'Gebraucht' }[c] || c)
 
 function timeLeft(iso) {
   if (!iso) return null
@@ -59,7 +57,7 @@ function RatingBar({ value, color }) {
   )
 }
 
-export default function PostTypeBody({ post, t, currentUserId, onVote, onParticipate, onToggleSold, onContactSeller }) {
+export default function PostTypeBody({ post, t, currentUserId, onVote, onParticipate }) {
   const m = post.metadata || {}
   const isOwner = post.profiles?.id === currentUserId
 
@@ -181,49 +179,6 @@ export default function PostTypeBody({ post, t, currentUserId, onVote, onPartici
     )
   }
 
-  // ── MARKETPLACE ─────────────────────────────────────────────────────────
-  if (post.post_type === 'marketplace') {
-    const sold = m.sold
-    return (
-      <Card accent="#eab308" t={t}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#eab308', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: "'Barlow', sans-serif" }}>{catLabel(m.category)}</span>
-          </div>
-          {sold && <Badge color="#f43f5e" t={t}>Verkauft</Badge>}
-        </div>
-        <h4 style={{ fontSize: '16px', fontWeight: 700, color: t.text, fontFamily: "'Barlow', sans-serif", margin: '0 0 6px', lineHeight: 1.25, textDecoration: sold ? 'line-through' : 'none', opacity: sold ? 0.6 : 1 }}>{m.item_title}</h4>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '22px', fontWeight: 800, color: '#eab308', fontFamily: "'Barlow Condensed', sans-serif" }}>{m.price} {m.currency || '€'}</span>
-          <Badge color={t.muted} t={t}>{condLabel(m.condition)}</Badge>
-          {m.location ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: t.muted, fontFamily: "'Barlow', sans-serif" }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              {m.location}
-            </span>
-          ) : null}
-        </div>
-        {m.description && <p style={{ fontSize: '14px', lineHeight: 1.5, color: t.text, fontFamily: "'Barlow', sans-serif", margin: '0 0 12px' }}>{m.description}</p>}
-        {isOwner ? (
-          <button onClick={() => onToggleSold?.(post)} style={{
-            width: '100%', padding: '10px', borderRadius: '10px', cursor: 'pointer',
-            border: `1.5px solid ${sold ? '#22c55e' : t.border}`,
-            background: sold ? 'rgba(34,197,94,0.12)' : 'transparent',
-            color: sold ? '#22c55e' : t.muted, fontSize: '13px', fontWeight: 700,
-            fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s',
-          }}>{sold ? 'Wieder verfügbar machen' : 'Als verkauft markieren'}</button>
-        ) : (
-          <button onClick={() => onContactSeller?.(post)} disabled={sold} style={{
-            width: '100%', padding: '10px', borderRadius: '10px', cursor: sold ? 'default' : 'pointer',
-            border: 'none', background: sold ? t.border : '#eab308',
-            color: sold ? t.muted : '#1a1400', fontSize: '13px', fontWeight: 800,
-            fontFamily: "'Barlow', sans-serif", transition: 'all 0.15s',
-          }}>{sold ? 'Nicht mehr verfügbar' : 'Verkäufer kontaktieren'}</button>
-        )}
-      </Card>
-    )
-  }
 
   // ── TOUR REPORT ─────────────────────────────────────────────────────────
   if (post.post_type === 'tour_report') {

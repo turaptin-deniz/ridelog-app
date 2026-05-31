@@ -45,18 +45,7 @@ const VEHICLE_TYPE_OPTS = [
   { id: 'auto',      label: 'Auto' },
   { id: 'sonstiges', label: 'Sonstiges' },
 ]
-const MARKET_CATEGORIES = [
-  { id: 'bike',  label: 'Fahrzeug' },
-  { id: 'parts', label: 'Teile' },
-  { id: 'gear',  label: 'Ausrüstung' },
-  { id: 'other', label: 'Sonstiges' },
-]
-const CONDITION_OPTS = [
-  { id: 'new',      label: 'Neu' },
-  { id: 'like_new', label: 'Wie neu' },
-  { id: 'good',     label: 'Gut' },
-  { id: 'used',     label: 'Gebraucht' },
-]
+
 const GOAL_TYPE_OPTS = [
   { id: 'distance', label: 'Distanz' },
   { id: 'rides',    label: 'Touren' },
@@ -82,7 +71,7 @@ const VIEW_TITLES = {
   route_tip:   'Strecken-Tipp',
   ride_buddy:  'Mitfahrer gesucht',
   poll:        'Umfrage',
-  marketplace: 'Anzeige aufgeben',
+
   tour_report: 'Tour-Bericht',
   challenge:   'Challenge',
 }
@@ -112,14 +101,14 @@ export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = 
   const blankRouteTip  = { road_name: '', region: '', distance_km: '', difficulty: 'medium', surface: 'asphalt', curviness: 3, scenery: 3, tip_text: '' }
   const blankRideBuddy = { date: '', time: '', start_location: '', destination: '', distance_km: '', pace: 'normal', vehicle_type: 'all', spots: '' }
   const blankPoll      = { question: '', options: ['', ''], duration: '7' }
-  const blankMarket    = { category: 'bike', item_title: '', price: '', condition: 'good', location: '', description: '' }
+
   const blankReport    = { title: '', region: '', days: '', distance_km: '', highlights: '', story: '' }
   const blankChallenge = { title: '', goal_type: 'distance', goal_value: '', duration: '30', description: '' }
 
   const [routeTip, setRouteTip]   = useState(blankRouteTip)
   const [rideBuddy, setRideBuddy] = useState(blankRideBuddy)
   const [poll, setPoll]           = useState(blankPoll)
-  const [market, setMarket]       = useState(blankMarket)
+
   const [report, setReport]       = useState(blankReport)
   const [challenge, setChallenge] = useState(blankChallenge)
 
@@ -128,7 +117,7 @@ export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = 
     setMeetup({ title: '', date: '', time: '', description: '', maxParticipants: '' })
     setVehicleFilter('all'); setStops([newStop()])
     setRouteTip(blankRouteTip); setRideBuddy(blankRideBuddy); setPoll(blankPoll)
-    setMarket(blankMarket); setReport(blankReport); setChallenge(blankChallenge)
+    setReport(blankReport); setChallenge(blankChallenge)
     setError('')
   }
 
@@ -349,22 +338,6 @@ export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = 
     createTyped('poll', meta, poll.question.trim(), false)
   }
 
-  const createMarketplace = () => {
-    if (!market.item_title.trim()) return setError('Gib einen Titel an.')
-    if (!market.price) return setError('Gib einen Preis an.')
-    const meta = {
-      category: market.category,
-      item_title: market.item_title.trim(),
-      price: parseFloat(market.price) || 0,
-      currency: '€',
-      condition: market.condition,
-      location: market.location.trim(),
-      description: market.description.trim(),
-      sold: false,
-    }
-    const content = `${meta.item_title} · ${meta.price} €`
-    createTyped('marketplace', meta, content, true)
-  }
 
   const createReport = () => {
     if (!report.title.trim()) return setError('Gib dem Bericht einen Titel.')
@@ -559,12 +532,7 @@ export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = 
             />
           </div>
 
-          <SectionLabel>Marktplatz</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            <OptionCard onClick={() => setView('marketplace')} accent="#eab308" title="Anzeige aufgeben" desc="Fahrzeug, Teile oder Ausrüstung verkaufen — Preis, Zustand, Fotos"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>}
-            />
-          </div>
+
         </div>
       )}
 
@@ -774,42 +742,6 @@ export default function CreateMenu({ open, onClose, onCreated, lang, pageMode = 
         </div>
       )}
 
-      {/* === MARKETPLACE === */}
-      {view === 'marketplace' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <div>
-            <label style={labelStyle}>Kategorie</label>
-            <ChipSelect options={MARKET_CATEGORIES} value={market.category} onChange={id => setMarket({ ...market, category: id })} columns={4} />
-          </div>
-          <div>
-            <label style={labelStyle}>Titel</label>
-            <input type="text" value={market.item_title} onChange={e => setMarket({ ...market, item_title: e.target.value })} placeholder="z.B. Shoei NXR2 Helm Gr. L" style={inputBase} onFocus={focusOn} onBlur={focusOff} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-3)' }}>
-            <div>
-              <label style={labelStyle}>Preis (€)</label>
-              <input type="number" min="0" value={market.price} onChange={e => setMarket({ ...market, price: e.target.value })} placeholder="250" style={inputBase} onFocus={focusOn} onBlur={focusOff} />
-            </div>
-            <div>
-              <label style={labelStyle}>Standort</label>
-              <input type="text" value={market.location} onChange={e => setMarket({ ...market, location: e.target.value })} placeholder="z.B. München" style={inputBase} onFocus={focusOn} onBlur={focusOff} />
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle}>Zustand</label>
-            <ChipSelect options={CONDITION_OPTS} value={market.condition} onChange={id => setMarket({ ...market, condition: id })} columns={4} />
-          </div>
-          <div>
-            <label style={labelStyle}>Beschreibung (optional)</label>
-            <textarea value={market.description} onChange={e => setMarket({ ...market, description: e.target.value })} placeholder="Details, Mängel, Versand…" rows={3} style={{ ...inputBase, resize: 'none', lineHeight: 1.5 }} onFocus={focusOn} onBlur={focusOff} />
-          </div>
-          <div>
-            <label style={labelStyle}>Fotos</label>
-            {PhotoArea('Fotos des Artikels hinzufügen')}
-          </div>
-          <PrimaryButton onClick={createMarketplace} disabled={posting} label={posting ? 'Wird eingestellt…' : 'Anzeige veröffentlichen'} />
-        </div>
-      )}
 
       {/* === TOUR REPORT === */}
       {view === 'tour_report' && (
