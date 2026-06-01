@@ -3,6 +3,17 @@ import { supabase } from '../supabase'
 
 const BRANDS = ['Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'BMW', 'Ducati', 'KTM', 'Triumph', 'Harley-Davidson', 'Aprilia', 'Andere']
 
+const MAINTENANCE_TYPES = [
+  { id: 'oil',    label: 'Ölwechsel',          icon: '🛢️' },
+  { id: 'tuev',   label: 'TÜV / HU',           icon: '📋' },
+  { id: 'tires',  label: 'Reifen',              icon: '⚫' },
+  { id: 'chain',  label: 'Kette',               icon: '⛓️' },
+  { id: 'brakes', label: 'Bremsen',             icon: '🛑' },
+  { id: 'filter', label: 'Luftfilter',          icon: '🔩' },
+  { id: 'fluids', label: 'Bremsflüssigkeit',    icon: '💧' },
+  { id: 'other',  label: 'Sonstiges',           icon: '🔧' },
+]
+
 const MOD_CATEGORIES = [
   { id: 'exhaust', label: 'Auspuff', icon: '💨' },
   { id: 'tires', label: 'Reifen', icon: '⚫' },
@@ -99,6 +110,10 @@ export default function Garage({ darkMode }) {
   const [newBike, setNewBike] = useState({ brand: 'Kawasaki', model: '', year: '', cc: '', hp: '', torque: '', weight: '', color: '', odometer: '' })
   const [editBike, setEditBike] = useState(null)
   const [newMod, setNewMod] = useState({ category: 'exhaust', product_name: '', brand: '', notes: '' })
+  const [reminders, setReminders]           = useState([])
+  const [showAddReminder, setShowAddReminder] = useState(false)
+  const [newReminder, setNewReminder]       = useState({ type: 'oil', label: 'Ölwechsel', due_date: '', due_km: '', notes: '' })
+  const [savingReminder, setSavingReminder] = useState(false)
 
   useEffect(() => { loadBikes() }, [])
 
@@ -109,6 +124,7 @@ export default function Garage({ darkMode }) {
     if (data && data.length > 0) {
       setSelectedBike(data[0])
       loadMods(data[0].id)
+      loadReminders(data[0].id)
     }
     setLoading(false)
   }
@@ -116,6 +132,64 @@ export default function Garage({ darkMode }) {
   const loadMods = async (bikeId) => {
     const { data } = await supabase.from('modifications').select('*').eq('motorcycle_id', bikeId)
     setMods(data || [])
+  }
+
+  const loadReminders = async (bikeId) => {
+    try {
+      const { data } = await supabase.from('maintenance_reminders').select('*').eq('motorcycle_id', bikeId).order('due_date', { ascending: true, nullsLast: true })
+      setReminders(data || [])
+    } catch { setReminders([]) }
+  }
+
+  const addReminder = async () => {
+    if (!newReminder.label.trim()) return
+    setSavingReminder(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const payload = {
+        motorcycle_id: selectedBike.id, user_id: user.id,
+        type: newReminder.type, label: newReminder.label.trim(),
+        due_date: newReminder.due_date || null,
+        due_km: newReminder.due_km ? parseInt(newReminder.due_km, 10) : null,
+        notes: newReminder.notes.trim() || null,
+      }
+      const { data, error } = await supabase.from('maintenance_reminders').insert(payload).select()
+      if (!error && data) {
+        setReminders(prev => [...prev, data[0]])
+        setShowAddReminder(false)
+        setNewReminder({ type: 'oil', label: 'Ölwechsel', due_date: '', due_km: '', notes: '' })
+      }
+    } catch (e) { console.error(e) }
+    setSavingReminder(false)
+  }
+
+  const toggleReminderDone = async (reminder) => {
+    const newDone = !reminder.done
+    setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, done: newDone } : r))
+    try {
+      await supabase.from('maintenance_reminders').update({ done: newDone }).eq('id', reminder.id)
+    } catch (e) { console.error(e) }
+  }
+
+  const deleteReminder = async (reminderId) => {
+    setReminders(prev => prev.filter(r => r.id !== reminderId))
+    try { await supabase.from('maintenance_reminders').delete().eq('id', reminderId) } catch (e) { console.error(e) }
+  }
+
+  const reminderStatus = (reminder, bike) => {
+    let overdue = false
+    let soon = false
+    if (reminder.due_date && !reminder.done) {
+      const daysLeft = Math.ceil((new Date(reminder.due_date).getTime() - Date.now()) / 86400000)
+      if (daysLeft < 0) overdue = true
+      else if (daysLeft <= 30) soon = true
+    }
+    if (reminder.due_km && bike?.odometer && !reminder.done) {
+      const kmLeft = reminder.due_km - (bike.odometer || 0)
+      if (kmLeft <= 0) overdue = true
+      else if (kmLeft <= 500) soon = true
+    }
+    return reminder.done ? 'done' : overdue ? 'overdue' : soon ? 'soon' : 'ok'
   }
 
   const parseBike = (bike) => ({
@@ -246,7 +320,7 @@ export default function Garage({ darkMode }) {
                 bike={bike}
                 mods={bike.id === selectedBike?.id ? mods : []}
                 selected={selectedBike?.id === bike.id}
-                onClick={() => { setSelectedBike(bike); loadMods(bike.id) }}
+                onClick={() => { setSelectedBike(bike); loadMods(bike.id); loadReminders(bike.id) }}
               />
             ))}
           </div>
@@ -304,6 +378,63 @@ export default function Garage({ darkMode }) {
                   </div>
                 ))
               )}
+
+              {/* ── Wartungs-Erinnerungen ── */}
+              <div style={{ marginTop: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: '600' }}>🔧 Wartung</h3>
+                  <button onClick={() => setShowAddReminder(true)} style={{
+                    background: 'transparent', color: '#f59e0b', border: '1px solid #f59e0b',
+                    borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                  }}>+ Erinnerung</button>
+                </div>
+
+                {reminders.length === 0 ? (
+                  <p style={{ color: t.muted, fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>Keine Wartungs-Erinnerungen</p>
+                ) : (
+                  reminders.map(reminder => {
+                    const status = reminderStatus(reminder, selectedBike)
+                    const statusColor = status === 'overdue' ? '#ef4444' : status === 'soon' ? '#f59e0b' : status === 'done' ? '#22c55e' : t.muted
+                    const typeInfo = MAINTENANCE_TYPES.find(t => t.id === reminder.type) || MAINTENANCE_TYPES[7]
+                    return (
+                      <div key={reminder.id} style={{
+                        background: t.surface, border: `1px solid ${status === 'overdue' ? '#ef444444' : status === 'soon' ? '#f59e0b44' : t.border}`,
+                        borderRadius: '8px', padding: '12px', marginBottom: '8px',
+                        display: 'flex', gap: '10px', alignItems: 'flex-start',
+                        opacity: status === 'done' ? 0.6 : 1,
+                      }}>
+                        <button onClick={() => toggleReminderDone(reminder)} style={{
+                          flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%',
+                          border: `2px solid ${statusColor}`, background: status === 'done' ? '#22c55e' : 'transparent',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginTop: '1px', transition: 'all 0.15s'
+                        }}>
+                          {status === 'done' && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '14px' }}>{typeInfo.icon}</span>
+                            <span style={{ fontWeight: 600, fontSize: '14px', textDecoration: status === 'done' ? 'line-through' : 'none' }}>{reminder.label}</span>
+                            {status === 'overdue' && <span style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444', background: '#ef444420', borderRadius: '4px', padding: '1px 6px' }}>ÜBERFÄLLIG</span>}
+                            {status === 'soon' && <span style={{ fontSize: '10px', fontWeight: 700, color: '#f59e0b', background: '#f59e0b20', borderRadius: '4px', padding: '1px 6px' }}>BALD</span>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            {reminder.due_date && <span style={{ color: statusColor, fontSize: '12px' }}>📅 {new Date(reminder.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+                            {reminder.due_km && <span style={{ color: t.muted, fontSize: '12px' }}>🛣️ bei {reminder.due_km.toLocaleString()} km</span>}
+                          </div>
+                          {reminder.notes && <p style={{ color: t.muted, fontSize: '12px', marginTop: '3px' }}>{reminder.notes}</p>}
+                        </div>
+                        <button onClick={() => deleteReminder(reminder.id)} style={{
+                          background: 'none', border: 'none', color: '#f87171',
+                          cursor: 'pointer', fontSize: '16px', padding: '0 0 0 4px', flexShrink: 0
+                        }}>✕</button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
           )}
         </>
@@ -315,6 +446,44 @@ export default function Garage({ darkMode }) {
 
       {showEditBike && editBike && (
         <BikeForm data={editBike} setData={setEditBike} onSave={saveBikeEdit} onClose={() => setShowEditBike(false)} title="Motorrad bearbeiten" />
+      )}
+
+      {showAddReminder && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: t.surface, borderRadius: '16px 16px 0 0', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h3 style={{ color: t.text, fontSize: '16px', fontWeight: '600' }}>Wartungs-Erinnerung</h3>
+              <button onClick={() => setShowAddReminder(false)} style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '20px' }}>✕</button>
+            </div>
+            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Typ</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+              {MAINTENANCE_TYPES.map(mt => (
+                <button key={mt.id} onClick={() => setNewReminder({ ...newReminder, type: mt.id, label: mt.label })} style={{
+                  padding: '10px', background: newReminder.type === mt.id ? '#f59e0b22' : t.bg,
+                  border: `1.5px solid ${newReminder.type === mt.id ? '#f59e0b' : t.border}`,
+                  borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                  color: newReminder.type === mt.id ? '#f59e0b' : t.text,
+                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s'
+                }}>
+                  <span>{mt.icon}</span> {mt.label}
+                </button>
+              ))}
+            </div>
+            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Bezeichnung</label>
+            <input value={newReminder.label} onChange={e => setNewReminder({ ...newReminder, label: e.target.value })} placeholder="z.B. Ölwechsel fällig" style={inputStyle} />
+            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Fälligkeit (Datum, optional)</label>
+            <input type="date" value={newReminder.due_date} onChange={e => setNewReminder({ ...newReminder, due_date: e.target.value })} style={inputStyle} />
+            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Fälligkeit (km, optional)</label>
+            <input type="number" value={newReminder.due_km} onChange={e => setNewReminder({ ...newReminder, due_km: e.target.value })} placeholder="z.B. 15000" style={inputStyle} />
+            <label style={{ color: t.muted, fontSize: '11px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Notizen (optional)</label>
+            <textarea value={newReminder.notes} onChange={e => setNewReminder({ ...newReminder, notes: e.target.value })} placeholder="Details..." style={{ ...inputStyle, height: '70px', resize: 'none' }} />
+            <button onClick={addReminder} disabled={savingReminder} style={{
+              width: '100%', background: '#f59e0b', color: 'white', border: 'none',
+              borderRadius: '8px', padding: '14px', cursor: savingReminder ? 'not-allowed' : 'pointer',
+              fontSize: '14px', fontWeight: '600', opacity: savingReminder ? 0.7 : 1
+            }}>{savingReminder ? 'Wird gespeichert…' : 'Erinnerung speichern'}</button>
+          </div>
+        </div>
       )}
 
       {showAddMod && (

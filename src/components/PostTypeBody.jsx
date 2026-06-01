@@ -57,12 +57,13 @@ function RatingBar({ value, color }) {
   )
 }
 
-export default function PostTypeBody({ post, t, currentUserId, onVote, onParticipate }) {
+export default function PostTypeBody({ post, t, currentUserId, onVote, onParticipate, onRateRoute }) {
   const m = post.metadata || {}
   const isOwner = post.profiles?.id === currentUserId
 
   // ── ROUTE TIP ───────────────────────────────────────────────────────────
   if (post.post_type === 'route_tip') {
+    const ratings = post.ratings || { avg: 0, count: 0, myRating: null }
     return (
       <Card accent="#22c55e" t={t}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
@@ -91,7 +92,44 @@ export default function PostTypeBody({ post, t, currentUserId, onVote, onPartici
             <RatingBar value={m.scenery || 0} color="#22c55e" />
           </div>
         </div>
-        {m.tip_text && <p style={{ fontSize: '14px', lineHeight: 1.55, color: t.text, fontFamily: "'Barlow', sans-serif", margin: 0 }}>{m.tip_text}</p>}
+        {m.tip_text && <p style={{ fontSize: '14px', lineHeight: 1.55, color: t.text, fontFamily: "'Barlow', sans-serif", margin: '0 0 12px' }}>{m.tip_text}</p>}
+
+        {/* ── Community-Bewertung ── */}
+        <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '10px', marginTop: m.tip_text ? 0 : '12px' }}>
+          {ratings.count > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              {[1,2,3,4,5].map(s => (
+                <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill={s <= Math.round(ratings.avg) ? '#f59e0b' : 'none'} stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              ))}
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', fontFamily: "'Barlow', sans-serif" }}>{ratings.avg.toFixed(1)}</span>
+              <span style={{ fontSize: '12px', color: t.muted, fontFamily: "'Barlow', sans-serif" }}>({ratings.count} {ratings.count === 1 ? 'Bewertung' : 'Bewertungen'})</span>
+            </div>
+          )}
+          {!isOwner && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <span style={{ fontSize: '12px', color: t.muted, marginRight: '6px', fontFamily: "'Barlow', sans-serif" }}>
+                {ratings.myRating ? 'Deine Bewertung:' : 'Bewerten:'}
+              </span>
+              {[1,2,3,4,5].map(star => (
+                <button key={star} onClick={() => onRateRoute?.(post, star)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px', lineHeight: 1, transition: 'transform 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                  <svg width="20" height="20" viewBox="0 0 24 24"
+                    fill={star <= (ratings.myRating || 0) ? '#f59e0b' : 'none'}
+                    stroke={star <= (ratings.myRating || 0) ? '#f59e0b' : t.muted}
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+          {isOwner && ratings.count === 0 && (
+            <p style={{ fontSize: '12px', color: t.muted, fontFamily: "'Barlow', sans-serif" }}>Noch keine Community-Bewertungen</p>
+          )}
+        </div>
       </Card>
     )
   }

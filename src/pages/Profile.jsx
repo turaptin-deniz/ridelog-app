@@ -122,6 +122,25 @@ const GENERAL_BADGES = [
 
 const ALL_BADGES = [...MOTO_BADGES, ...CAR_BADGES, ...GENERAL_BADGES]
 
+// ── Streak berechnen (aufeinanderfolgende Monate mit Posts) ──────────────────
+function calcStreak(posts) {
+  if (!posts || posts.length === 0) return 0
+  const months = new Set(posts.map(p => {
+    const d = new Date(p.created_at)
+    return `${d.getFullYear()}-${d.getMonth()}`
+  }))
+  let streak = 0
+  const now = new Date()
+  let y = now.getFullYear(), mo = now.getMonth()
+  while (months.has(`${y}-${mo}`)) {
+    streak++
+    mo--
+    if (mo < 0) { mo = 11; y-- }
+    if (streak > 120) break
+  }
+  return streak
+}
+
 export default function Profile({ darkMode, setDarkMode }) {
   const t = darkMode ? {
     bg: '#0a0a0a', surface: '#111', border: '#1f1f1f', text: '#fff', muted: '#555'
@@ -151,7 +170,8 @@ export default function Profile({ darkMode, setDarkMode }) {
   const [editing, setEditing] = useState(false)
   const [selectedRoute, setSelectedRoute] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
-  const [editData, setEditData] = useState({ display_name: '', username: '', bio: '', location: '' })
+  const [editData, setEditData] = useState({ display_name: '', username: '', bio: '', location: '', emergency_name: '', emergency_phone: '' })
+  const [streak, setStreak] = useState(0)
   const [usernameError, setUsernameError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
@@ -206,7 +226,8 @@ export default function Profile({ darkMode, setDarkMode }) {
     setEarnedBadges(badgeData?.map(b => b.type) || [])
     setUserPosts(postData || [])
     setUserReposts(repostList)
-    setEditData({ display_name: prof?.display_name || '', username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '' })
+    setStreak(calcStreak(postData || []))
+    setEditData({ display_name: prof?.display_name || '', username: prof?.username || '', bio: prof?.bio || '', location: prof?.location || '', emergency_name: prof?.emergency_contact_name || '', emergency_phone: prof?.emergency_contact_phone || '' })
     setLoading(false)
   }
 
@@ -292,6 +313,8 @@ const toggleFollow = async () => {
       display_name: editData.display_name,
       bio: editData.bio,
       location: editData.location,
+      emergency_contact_name: editData.emergency_name.trim() || null,
+      emergency_contact_phone: editData.emergency_phone.trim() || null,
     }
     // Nur updaten wenn Username sich geändert hat
     if (editData.username.trim() !== (profile?.username || '')) {
@@ -613,6 +636,25 @@ const toggleFollow = async () => {
               onBlur={e => e.target.style.borderColor = t.border}
             />
 
+            {/* Notfallkontakt */}
+            <div style={{ marginBottom: '10px', padding: '12px', background: '#ef444408', border: '1px solid #ef444430', borderRadius: '8px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontFamily: "'Barlow', sans-serif" }}>
+                🆘 Notfallkontakt (optional)
+              </p>
+              <input
+                type="text" value={editData.emergency_name}
+                onChange={e => setEditData({ ...editData, emergency_name: e.target.value })}
+                placeholder="Name (z.B. Max Mustermann)"
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: '13px', fontFamily: "'Barlow', sans-serif", background: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 10px', color: t.text, outline: 'none', marginBottom: '8px' }}
+              />
+              <input
+                type="tel" value={editData.emergency_phone}
+                onChange={e => setEditData({ ...editData, emergency_phone: e.target.value })}
+                placeholder="Telefon (z.B. +49 123 456789)"
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: '13px', fontFamily: "'Barlow', sans-serif", background: t.bg, border: `1px solid ${t.border}`, borderRadius: '8px', padding: '8px 10px', color: t.text, outline: 'none' }}
+              />
+            </div>
+
             {/* Speichern / Abbrechen */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -663,7 +705,14 @@ const toggleFollow = async () => {
                   @{profile?.username}
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginTop: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginTop: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {/* Streak Badge */}
+                {streak >= 2 && (
+                  <div style={{ background: '#f9731622', border: '1px solid #f9731655', borderRadius: '6px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ fontSize: '12px' }}>🔥</span>
+                    <span style={{ color: '#f97316', fontSize: '11px', fontWeight: 700, fontFamily: "'Barlow', sans-serif" }}>{streak}M Streak</span>
+                  </div>
+                )}
                 {/* Liga Badge */}
                 <div style={{
                   background: `${league.color}1a`, border: `1px solid ${league.color}55`,
@@ -706,6 +755,18 @@ const toggleFollow = async () => {
 
             {/* Bio */}
             {profile?.bio && <p style={{ fontSize: '14px', lineHeight: '1.6', marginTop: profile?.location ? 0 : '8px' }}>{profile.bio}</p>}
+
+            {/* Notfallkontakt */}
+            {(profile?.emergency_contact_name || profile?.emergency_contact_phone) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', padding: '8px 10px', background: '#ef444410', border: '1px solid #ef444430', borderRadius: '8px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                <span style={{ fontSize: '12px', color: '#ef4444', fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+                  Notfall: {[profile.emergency_contact_name, profile.emergency_contact_phone].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>

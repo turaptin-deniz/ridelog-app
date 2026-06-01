@@ -15,7 +15,7 @@ function formatTime(dateStr) {
 }
 
 // ── PostCard ─────────────────────────────────────────────────────────────────
-function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick, currentUserId, onVote, onParticipate, onToggleSold, onContactSeller }) {
+function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick, currentUserId, onVote, onParticipate, onRateRoute }) {
   const [slideIdx, setSlideIdx] = useState(0)
   const photos = post.photos || []
   const hasMedia = photos.length > 0
@@ -84,7 +84,7 @@ function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick, curren
             <button style={{ background: 'none', border: 'none', color: t.muted, cursor: 'pointer', fontSize: '17px', marginLeft: 'auto', padding: '0 4px', lineHeight: 1 }}>···</button>
           </div>
 
-          {/* Typed post body (route_tip, poll, marketplace, …) */}
+          {/* Typed post body (route_tip, poll, ride_buddy, …) */}
           {isTyped && (
             <PostTypeBody
               post={post}
@@ -92,8 +92,7 @@ function PostCard({ post, t, onLike, onComment, onRepost, onProfileClick, curren
               currentUserId={currentUserId}
               onVote={onVote}
               onParticipate={onParticipate}
-              onToggleSold={onToggleSold}
-              onContactSeller={onContactSeller}
+              onRateRoute={onRateRoute}
             />
           )}
 
@@ -307,7 +306,19 @@ export default function Feed({ darkMode, onSelectUser }) {
           } catch { participation = { count: 0, joined: false } }
         }
 
-        return { ...post, liked: !!like, reposted: !!repost, like_count: likeCount || 0, comment_count: commentCount || 0, repost_count: repostCount || 0, poll, participation }
+        // Route ratings (route_tip posts)
+        let ratings = null
+        if (post.post_type === 'route_tip') {
+          try {
+            const { data: rData } = await supabase.from('route_ratings').select('rating, user_id').eq('post_id', post.id)
+            const count = rData?.length || 0
+            const avg = count > 0 ? Math.round((rData.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0
+            const myRating = rData?.find(r => r.user_id === userId)?.rating || null
+            ratings = { avg, count, myRating }
+          } catch { ratings = { avg: 0, count: 0, myRating: null } }
+        }
+
+        return { ...post, liked: !!like, reposted: !!repost, like_count: likeCount || 0, comment_count: commentCount || 0, repost_count: repostCount || 0, poll, participation, ratings }
       }))
       setPosts(withMeta)
     }
@@ -380,18 +391,27 @@ export default function Feed({ darkMode, onSelectUser }) {
     } catch (e) { console.error('toggleParticipate:', e) }
   }
 
-  // ── Marketplace: toggle sold (owner only) ─────────────────────────────────
-  const toggleSold = async (post) => {
-    if (!currentUser || post.profiles?.id !== currentUser.id) return
-    const newMeta = { ...(post.metadata || {}), sold: !post.metadata?.sold }
-    setPosts(posts.map(p => p.id === post.id ? { ...p, metadata: newMeta } : p))
+  // ── Route rating (route_tip posts) ────────────────────────────────────────
+  const rateRoute = async (post, rating) => {
+    if (!currentUser) return
+    const prev = post.ratings?.myRating
+    if (prev === rating) return
+    // Optimistic update
+    setPosts(posts.map(p => {
+      if (p.id !== post.id) return p
+      const r = p.ratings || { avg: 0, count: 0, myRating: null }
+      const wasRated = r.myRating !== null
+      const newCount = wasRated ? r.count : r.count + 1
+      const prevTotal = r.avg * r.count
+      const newAvg = Math.round(((prevTotal - (wasRated ? r.myRating : 0) + rating) / newCount) * 10) / 10
+      return { ...p, ratings: { avg: newAvg, count: newCount, myRating: rating } }
+    }))
     try {
-      await supabase.from('posts').update({ metadata: newMeta }).eq('id', post.id)
-    } catch (e) { console.error('toggleSold:', e) }
-  }
-
-  const contactSeller = (post) => {
-    onSelectUser?.(post.profiles?.id)
+      await supabase.from('route_ratings').upsert(
+        { post_id: post.id, user_id: currentUser.id, rating },
+        { onConflict: 'post_id,user_id' }
+      )
+    } catch (e) { console.error('rateRoute:', e) }
   }
 
   // ── Open comment sheet ────────────────────────────────────────────────────
@@ -505,8 +525,7 @@ export default function Feed({ darkMode, onSelectUser }) {
                 currentUserId={currentUser?.id}
                 onVote={votePoll}
                 onParticipate={toggleParticipate}
-                onToggleSold={toggleSold}
-                onContactSeller={contactSeller}
+                onRateRoute={rateRoute}
               />
             ))}
           </>
